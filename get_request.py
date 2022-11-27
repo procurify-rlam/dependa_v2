@@ -5,7 +5,7 @@ import json
 import os
 
 
-def main():
+def get_repo_list(org):
 
     try:
         apikey = os.environ["GH_API_KEY"]
@@ -20,7 +20,7 @@ def main():
 
     all_repo_list = []
     page = 1
-    url = "https://api.github.com/orgs/procurify/repos"
+    url = f"https://api.github.com/orgs/{org}/repos"
     req_fields = {"per_page": 100, "page": page}
     req_headers = {
         "Accept": "application/vnd.github+json",
@@ -64,6 +64,11 @@ def main():
 # final_formatted = json.dumps(item, indent=2)
 
 # print(final_formatted)
+
+
+def main():
+    get_repo_list("procurify")
+
 
 if __name__ == "__main__":
     main()
