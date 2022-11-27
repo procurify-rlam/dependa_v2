@@ -5,16 +5,7 @@ import json
 import os
 
 
-def get_repo_list(org):
-
-    try:
-        apikey = os.environ["GH_API_KEY"]
-        auth = "Bearer " + apikey
-    except KeyError:
-        print("GH_API_KEY environment variable not set")
-        print("Please set the Github API via environment variable.")
-        print("Eg. export GH_API_KEY=ghp_XXXXXXXXXXXXXXXXXXXXX")
-        quit()
+def get_repo_list(auth, org):
 
     http = urllib3.PoolManager()
     # set args for http request
@@ -55,9 +46,44 @@ def get_repo_list(org):
     return non_archived, archived
 
 
+def get_dependabot_alerts(auth, org):
+
+    http = urllib3.PoolManager()
+    # set args for http request
+    page = 1
+    url = f"https://api.github.com/repos/{org}/optimus/dependabot/alerts"
+    req_fields = {"first": 100}
+    req_headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": auth,
+    }
+    resp = http.request("GET", url, fields=req_fields, headers=req_headers)
+    json_resp = json.loads(resp.data.decode("utf-8"))
+
+    print(json_resp[0])
+
+    print()
+    print(len(json_resp))
+
+
 def main():
 
-    non_archived, archived = get_repo_list("procurify")
+    try:
+        apikey = os.environ["GH_API_KEY"]
+        auth = "Bearer " + apikey
+    except KeyError:
+        print("GH_API_KEY environment variable not set")
+        print("Please set the Github API via environment variable.")
+        print("Eg. export GH_API_KEY=ghp_XXXXXXXXXXXXXXXXXXXXX")
+        quit()
+
+    # non_archived, archived = get_repo_list(auth, "procurify")
+
+    # print(non_archived)
+    # print()
+    # print(archived)
+
+    get_dependabot_alerts(auth, "procurify")
 
 
 if __name__ == "__main__":
