@@ -3,9 +3,10 @@
 import urllib3
 import json
 import os
+import sys
 
 
-def get_repo_list(auth, org):
+def get_repo_list():
 
     http = urllib3.PoolManager()
     # set args for http request
@@ -46,7 +47,7 @@ def get_repo_list(auth, org):
     return non_archived, archived
 
 
-def get_dependabot_alerts(auth, org):
+def get_dependabot_alerts():
 
     http = urllib3.PoolManager()
     # set args for http request
@@ -68,6 +69,19 @@ def get_dependabot_alerts(auth, org):
 
 def main():
 
+    # non_archived, archived = get_repo_list("procurify")
+    non_archived, archived = get_repo_list()
+
+    print(non_archived)
+    print()
+    print(archived)
+
+    # get_dependabot_alerts(auth, "procurify")
+
+
+if __name__ == "__main__":
+
+    # keep auth and org values global in scope
     try:
         apikey = os.environ["GH_API_KEY"]
         auth = "Bearer " + apikey
@@ -75,16 +89,19 @@ def main():
         print("GH_API_KEY environment variable not set")
         print("Please set the Github API via environment variable.")
         print("Eg. export GH_API_KEY=ghp_XXXXXXXXXXXXXXXXXXXXX")
-        quit()
+        sys.exit(1)
 
-    # non_archived, archived = get_repo_list(auth, "procurify")
+    if len(sys.argv) == 1:
+        print("Please provide an organiztion to query.")
+        print()
+        print(f"python3 {sys.argv[0]} <name of org>")
+        print(f"IE: python3 {sys.argv[0]} procurify")
+        sys.exit(1)
+    elif len(sys.argv) == 2:
+        org = sys.argv[1]
+    else:
+        print("Too many arguments provided.")
+        print("Exiting.")
+        sys.exit(1)
 
-    # print(non_archived)
-    # print()
-    # print(archived)
-
-    get_dependabot_alerts(auth, "procurify")
-
-
-if __name__ == "__main__":
     main()
