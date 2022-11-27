@@ -17,7 +17,7 @@ def get_repo_list(org):
         quit()
 
     http = urllib3.PoolManager()
-
+    # set args for http request
     all_repo_list = []
     page = 1
     url = f"https://api.github.com/orgs/{org}/repos"
@@ -40,34 +40,24 @@ def get_repo_list(org):
             json_resp = json.loads(resp.data.decode("utf-8"))
             all_repo_list.append(json_resp)
 
-    # flatten the json lists
+    # flatten the list of json lists to a single list
     final_list = sum(all_repo_list, [])
 
-    # keep active repos only
+    # create separte lists for archived and non-archived repos
+    archived = []
     non_archived = []
-
     for item in final_list:
         if item["archived"] is False:
-            print(item["name"])
-            non_archived.append(item)
+            non_archived.append(item["name"])
+        if item["archived"] is True:
+            archived.append(item["name"])
 
-    print(str(len(non_archived)))
-
-
-# for item in range(len(json_resp)):
-# print(json_resp[item]["name"])
-
-
-# json_formatted = json.dumps(item, indent=2)
-# print(type(json_formatted))
-
-# final_formatted = json.dumps(item, indent=2)
-
-# print(final_formatted)
+    return non_archived, archived
 
 
 def main():
-    get_repo_list("procurify")
+
+    non_archived, archived = get_repo_list("procurify")
 
 
 if __name__ == "__main__":
