@@ -4,6 +4,7 @@ import urllib3
 import json
 import os
 import sys
+import re
 
 
 def get_repo_list():
@@ -47,24 +48,43 @@ def get_repo_list():
     return non_archived, archived
 
 
-def get_dependabot_alerts():
+def get_dependabot_alerts(non_archived):
 
     http = urllib3.PoolManager()
     # set args for http request
     page = 1
-    url = f"https://api.github.com/repos/{org}/optimus/dependabot/alerts"
-    req_fields = {"first": 100}
+    url = (
+        # f"https://api.github.com/repos/{org}/non_archived[0]/dependabot/alerts"
+        f"https://api.github.com/repos/{org}/{non_archived[17]}/dependabot/alerts"
+    )
+    # req_fields = {"before"}
     req_headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": auth,
     }
-    resp = http.request("GET", url, fields=req_fields, headers=req_headers)
+    # resp = http.request("GET", url, fields=req_fields, headers=req_headers)
+    resp = http.request("GET", url, headers=req_headers)
     json_resp = json.loads(resp.data.decode("utf-8"))
+    json_resp_header = dict(resp.headers)
 
-    print(json_resp[0])
-
+    # num_vulns = len(json_resp)
+    # print(f"number of vulns: {num_vulns}")
+    print(json.dumps(json_resp_header, indent=2))
     print()
-    print(len(json_resp))
+
+    # if response is paginated, find last page to query
+    if "Link" in json_resp_header:
+        link = json_resp_header["Link"]
+        pages_regex = re.findall(r"page=\d+", link)
+        print(pages_regex[1])
+        print()
+        lastpage_regex = re.findall("\d+", pages_regex[1])
+        lastpage = int(lastpage_regex[0])
+        print(lastpage)
+        # print(f"lastpage: str({lastpage[1]})")
+
+    # print(len(json.dumps(json_resp_header["Link"])))
+    # print(json.dumps(json_resp, indent=2))
 
 
 def main():
@@ -73,10 +93,8 @@ def main():
     non_archived, archived = get_repo_list()
 
     print(non_archived)
-    print()
-    print(archived)
 
-    # get_dependabot_alerts(auth, "procurify")
+    get_dependabot_alerts(non_archived)
 
 
 if __name__ == "__main__":
