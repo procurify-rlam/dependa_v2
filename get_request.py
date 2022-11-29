@@ -52,7 +52,7 @@ def get_repo_list():
 
 def get_dependabot_alerts(non_archived):
 
-    print(non_archived[5])
+    # print(non_archived[5])
 
     repos_no_vulns = []
     repos_with_vulns = []
@@ -64,59 +64,70 @@ def get_dependabot_alerts(non_archived):
     http = urllib3.PoolManager()
     # set args for http request
     page = 1
-    url = (
-        # f"https://api.github.com/repos/{org}/non_archived[0]/dependabot/alerts"
-        f"https://api.github.com/repos/{org}/{non_archived[5]}/dependabot/alerts"
-    )
     req_headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": auth,
     }
 
-    # on initial request, no custom field headers added to the request
-    # the intent, to determine the total length of the return via returned
-    # link header
-    resp = http.request("GET", url, headers=req_headers)
-    json_resp_header = dict(resp.headers)
+    for repo_name in non_archived:
 
-    print(json.dumps(json_resp_header, indent=2))
-    print()
+        print(f"Getting Dependabot alert info for: {repo_name}")
 
-    # if response is paginated, find last page to query
-    if "Link" in json_resp_header:
-        pages_regex = re.findall(r"page=\d+", json_resp_header["Link"])
-        lastpage_regex = re.findall(r"\d+", pages_regex[1])
-        lastpage = int(lastpage_regex[0])
-        # print(lastpage)
+        url = (
+            # f"https://api.github.com/repos/{org}/non_archived[0]/dependabot/alerts"
+            f"https://api.github.com/repos/{org}/{repo_name}/dependabot/alerts"
+        )
 
-        # recalculate num of queries to make 100 items per request
-        # default num of items returned is 30
-        num_queries = int(math.ceil((lastpage * 30) / 100))
-        # print(num_queries)
-        for query in range(num_queries):
-            req_fields = {"first": 100, "page": page}
-            resp = http.request(
-                "GET", url, fields=req_fields, headers=req_headers
-            )
+        # on initial request, no custom field headers added to the request
+        # the intent, to determine the total length of the return via returned
+        # link header
+        resp = http.request("GET", url, headers=req_headers)
+        json_resp_header = dict(resp.headers)
+
+        # print(json.dumps(json_resp_header, indent=2))
+        print()
+
+        # if response is paginated, find last page to query
+        if "Link" in json_resp_header:
+            pages_regex = re.findall(r"page=\d+", json_resp_header["Link"])
+            lastpage_regex = re.findall(r"\d+", pages_regex[1])
+            lastpage = int(lastpage_regex[0])
+            # print(lastpage)
+
+            # recalculate num of queries to make 100 items per request
+            # default num of items returned is 30
+            num_queries = int(math.ceil((lastpage * 30) / 100))
+            # print(num_queries)
+            for query in range(num_queries):
+                req_fields = {"first": 100, "page": page}
+                resp = http.request(
+                    "GET", url, fields=req_fields, headers=req_headers
+                )
+                json_resp = json.loads(resp.data.decode("utf-8"))
+                temp_vulns.append(json_resp)
+
+            repo_vulns = sum(temp_vulns, [])
+            print(str(len(repo_vulns)))
+
+            repos_with_vulns.append(repo_vulns)
+            print(f"repos_no_vulns: {repos_no_vulns}")
+
+            # print(f"length of json_resp data: {len(json_resp)}")
+        else:
             json_resp = json.loads(resp.data.decode("utf-8"))
-            temp_vulns.append(json_resp)
+            if len(json_resp) == 0:
+                repos_no_vulns.append(repo_name)
+                print(f"repos_no_vulns: {repos_no_vulns}")
+            elif "Message" in json_resp:
+                print(json_resp)
+            else:
+                repos_with_vulns.append(json_resp)
+                print(f"repos_no_vulns: {repos_with_vulns}")
+        # todo determine which repos have dependabot alerts/do not/disabled
+        # return list of dictionaries for each
 
-        # print(f"length of json_resp data: {len(json_resp)}")
-    else:
-        json_resp = json.loads(resp.data.decode("utf-8"))
-        # if len(json_respon) == 0:
-
-    # todo determine which repos have dependabot alerts/do not/disabled
-    # return list of dictionaries for each
-
-    temp_vulns.append(json_resp)
-    print(temp_vulns)
-
-    print()
-    print()
-    repo_vulns = sum(temp_vulns, [])
-
-    print(str(len(repo_vulns)))
+        print()
+        print()
 
     # print(type(repo_vulns[0]))
     # print(repo_vulns[0])
@@ -135,9 +146,10 @@ def get_dependabot_alerts(non_archived):
 def main():
 
     # non_archived, archived = get_repo_list("procurify")
-    non_archived, archived = get_repo_list()
+    # non_archived, archived = get_repo_list()
 
     # print(non_archived)
+
 
     get_dependabot_alerts(non_archived)
 
