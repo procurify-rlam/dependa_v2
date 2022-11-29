@@ -6,6 +6,7 @@ import os
 import sys
 import re
 import math
+import pprint
 
 
 def get_repo_list():
@@ -67,6 +68,7 @@ def get_dependabot_alerts(non_archived):
     req_headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": auth,
+        # "Content-Type": "application/json",
     }
 
     for repo_name in non_archived:
@@ -79,10 +81,20 @@ def get_dependabot_alerts(non_archived):
         )
 
         # on initial request, no custom field headers added to the request
-        # the intent, to determine the total length of the return via returned
-        # link header
+        # this is to determine the total number of items in the response via
+        # the link header
         resp = http.request("GET", url, headers=req_headers)
         json_resp_header = dict(resp.headers)
+
+        print("initial request")
+        print(type(resp.data.decode("iso-8859-1")))
+        # print(type(json.loads(resp.data.decode("utf-8"))))
+        # print(json.loads(resp.data.decode("utf-8")))
+        print()
+        print(resp.data.decode("iso-8859-1"))
+        # print(dict(resp.data.decode("iso-8859-1")))
+
+        print()
 
         # print(json.dumps(json_resp_header, indent=2))
         print()
@@ -99,35 +111,57 @@ def get_dependabot_alerts(non_archived):
             num_queries = int(math.ceil((lastpage * 30) / 100))
             # print(num_queries)
             for query in range(num_queries):
-                req_fields = {"first": 100, "page": page}
+                req_fields = {"first": 100, "page": page, "state": "open"}
                 resp = http.request(
                     "GET", url, fields=req_fields, headers=req_headers
                 )
                 json_resp = json.loads(resp.data.decode("utf-8"))
+
+                print("look here")
+                print(type(json_resp))
+
                 temp_vulns.append(json_resp)
+                page += 1
 
             repo_vulns = sum(temp_vulns, [])
-            print(str(len(repo_vulns)))
+            # print(str(len(repo_vulns)))
 
             repos_with_vulns.append(repo_vulns)
-            print(f"repos_no_vulns: {repos_no_vulns}")
+            # repos_with_vulns.append(repo_name)
+            # print(f"repos_no_vulns: {repos_no_vulns}")
 
             # print(f"length of json_resp data: {len(json_resp)}")
         else:
             json_resp = json.loads(resp.data.decode("utf-8"))
+            print("look here 2")
+            print(type(json_resp))
             if len(json_resp) == 0:
                 repos_no_vulns.append(repo_name)
-                print(f"repos_no_vulns: {repos_no_vulns}")
-            elif "Message" in json_resp:
-                print(json_resp)
+                # print(f"repos_no_vulns: {repos_no_vulns}")
+            elif "message" in json_resp:
+                repos_disabled.append(repo_name)
+                # print(f"repos_disabled: {repos_disabled}")
             else:
                 repos_with_vulns.append(json_resp)
-                print(f"repos_no_vulns: {repos_with_vulns}")
+                # print(f"repos_with_vulns: {repos_with_vulns}")
         # todo determine which repos have dependabot alerts/do not/disabled
         # return list of dictionaries for each
 
-        print()
-        print()
+    print()
+    print()
+    print(f"repos_no_vulns: {repos_no_vulns}")
+    print(f"repos_disabled: {repos_disabled}")
+    print()
+    print()
+    print()
+    print()
+    print()
+    # print(f"repos_with_vulns: {repos_with_vulns[2]}")
+    print(f"type: {type(repos_with_vulns)}")
+    print()
+    # with open("all_data.txt", "w") as all_data_file:
+    # pp = pprint.PrettyPrinter(depth=4, sort_dicts=False)
+    # pp.pprint(repos_with_vulns)
 
     # print(type(repo_vulns[0]))
     # print(repo_vulns[0])
@@ -149,7 +183,6 @@ def main():
     # non_archived, archived = get_repo_list()
 
     # print(non_archived)
-
 
     get_dependabot_alerts(non_archived)
 
