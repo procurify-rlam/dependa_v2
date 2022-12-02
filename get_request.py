@@ -44,7 +44,6 @@ def get_repo_list():
     for item in final_list:
         if item["archived"] is False:
             non_archived.append(item["name"])
-        # if item["archived"] is True:
         else:
             archived.append(item["name"])
 
@@ -56,9 +55,11 @@ def get_dependabot_alerts(non_archived):
     repos_no_vulns = []
     repos_with_vulns = []
     repos_disabled = []
-
     repo_vulns = []
     final_list = []
+
+    temp_list = []
+    temp_temp_list = []
 
     http = urllib3.PoolManager()
     # set args for http request
@@ -103,8 +104,13 @@ def get_dependabot_alerts(non_archived):
             # flatten the list of lists, then add it as single item to a
             # list - each item in the final list representing
             # a single repo of dependabot information
+            # keep
             repo_vulns = sum(temp_vulns, [])
             final_list.append(repo_vulns)
+            ####
+
+            print(type(json_resp[0]))
+
         else:
             json_resp = json.loads(resp.data.decode("utf-8"))
             if len(json_resp) == 0:
@@ -131,14 +137,16 @@ def get_dependabot_alerts(non_archived):
     print(f"len final_list[0]: {len(final_list[0])}")
     print(f"type final_list[0]: {type(final_list[0])}")
     print()
-    print(f"len final_list[1]: {len(final_list[1])}")
-    print(f"type final_list[1]: {type(final_list[1])}")
-    print()
-    print(f"len final_list[2]: {len(final_list[2])}")
-    print(f"type final_list[2]: {type(final_list[2])}")
-    print()
-    print(f"len final_list[3]: {len(final_list[3])}")
-    print(f"type final_list[3]: {type(final_list[3])}")
+    #    print(f"len final_list[1]: {len(final_list[1])}")
+    #    print(f"type final_list[1]: {type(final_list[1])}")
+    #    print()
+    #    print(f"len final_list[2]: {len(final_list[2])}")
+    #    print(f"type final_list[2]: {type(final_list[2])}")
+    #    print()
+    # print(f"len final_list[3]: {len(final_list[3])}")
+    # print(f"type final_list[3]: {type(final_list[3])}")
+
+    # print(f"type final_list[0][0]: {type(final_list[0][0])}")
 
     with open("all_data.json", "w", encoding="utf-8") as all_json_data_file:
         json.dump(
