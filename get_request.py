@@ -57,37 +57,38 @@ def get_dependabot_alerts(non_archived):
     repos_with_vulns = []
     repos_disabled = []
 
-    temp_vulns = []
     repo_vulns = []
+    final_list = []
 
     http = urllib3.PoolManager()
     # set args for http request
-    page = 1
     req_headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": auth,
     }
 
     for repo_name in non_archived:
+        page = 1
+        temp_vulns = []
 
         print(f"Getting Dependabot alert info for: {repo_name}")
 
         url = (
             f"https://api.github.com/repos/{org}/{repo_name}/dependabot/alerts"
         )
-        # on initial request, no custom field headers are added to the request
-        # this is to determine the total number of items in the response via
-        # the link header
+        # custom field headers are not added to the initial request
+        # this determines the total number of pages in the response via the
+        # link header; link header only present if response requires pagination
         resp = http.request("GET", url, headers=req_headers)
         json_resp_header = dict(resp.headers)
 
-        # if response is paginated, find last page to query
+        # if 30 or more items, the response will be paginated,
+        # find last page to query
         if "Link" in json_resp_header:
             pages_regex = re.findall(r"page=\d+", json_resp_header["Link"])
             lastpage_regex = re.findall(r"\d+", pages_regex[1])
             lastpage = int(lastpage_regex[0])
             repos_with_vulns.append(repo_name)
-            print(repo_name)
 
             for query in range(lastpage):
                 req_fields = {"page": page}
@@ -96,64 +97,64 @@ def get_dependabot_alerts(non_archived):
                 )
                 json_resp = json.loads(resp.data.decode("utf-8"))
                 print(f"json_resp: {type(json_resp)}")
-                # print(f"json_resp[0]: {type(json_resp[0])}")
+                print(f"json_resp[0]: {type(json_resp[0])}")
                 temp_vulns.append(json_resp)
                 page += 1
+            # flatten the list of lists, then add it as single item to a
+            # list - each item in the final list representing
+            # a single repo of dependabot information
+            repo_vulns = sum(temp_vulns, [])
+            final_list.append(repo_vulns)
         else:
             json_resp = json.loads(resp.data.decode("utf-8"))
             if len(json_resp) == 0:
+                # no dependabot alerts associated with the repo
                 repos_no_vulns.append(repo_name)
             elif "message" in json_resp:
+                # dependabot alerts disabled for the repo
                 repos_disabled.append(repo_name)
             else:
+                # less than 30 dependabot alerts associated with the repo
                 repos_with_vulns.append(repo_name)
-        # todo determine which repos have dependabot alerts/do not/disabled
-        # return list of dictionaries for each
+                final_list.append(json_resp)
 
     print()
     print(f"repos_no_vulns: {repos_no_vulns}")
     print(f"repos_disabled: {repos_disabled}")
     print(f"repos_with_vulns: {repos_with_vulns}")
+
     print()
+    # print(f"final_list: {final_list}")
+    print(f"len final_list: {len(final_list)}")
+    print(f"type final_list: {type(final_list)}")
     print()
+    print(f"len final_list[0]: {len(final_list[0])}")
+    print(f"type final_list[0]: {type(final_list[0])}")
     print()
-    # print(f"repos_with_vulns: {repos_with_vulns[2]}")
-    # print(f"type (repos_with_vulns): {type(repos_with_vulns[0][0])}")
-    print(f"len (temp_vulns): {str(len(temp_vulns))}")
-    print(f"type (temp_vulns): {type(temp_vulns)}")
-    print(f"type (temp_vulns[0]): {type(temp_vulns[0])}")
+    print(f"len final_list[1]: {len(final_list[1])}")
+    print(f"type final_list[1]: {type(final_list[1])}")
     print()
+    print(f"len final_list[2]: {len(final_list[2])}")
+    print(f"type final_list[2]: {type(final_list[2])}")
+    print()
+    print(f"len final_list[3]: {len(final_list[3])}")
+    print(f"type final_list[3]: {type(final_list[3])}")
 
     with open("all_data.json", "w", encoding="utf-8") as all_json_data_file:
         json.dump(
-            temp_vulns,
+            final_list,
             all_json_data_file,
             indent=4,
             sort_keys=False,
             ensure_ascii=False,
         )
 
-    # print(type(repo_vulns[0]))
-    # print(repo_vulns[0])
-
-    # for item in repo_vulns:
-    # print(item["state"])
-
-    # final_list = sum(all_repo_list, [])
-
-    # temp_vulns.append(json_resp)
-
-    # print(len(json.dumps(json_resp_header["Link"])))
-    # print(json.dumps(json_resp, indent=2))
-
 
 def main():
 
     # non_archived, archived = get_repo_list("procurify")
     # non_archived, archived = get_repo_list()
-
     # print(non_archived)
-
 
     get_dependabot_alerts(non_archived)
 
