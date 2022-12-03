@@ -5,8 +5,196 @@ import json
 import os
 import sys
 import re
-import math
 import pprint
+import csv
+from datetime import datetime
+
+
+class Repo:
+    def __init__(self, name, repo_dict):
+
+        self.name = name
+
+        (
+            self.total_open,
+            self.published_at,
+            self.open_crit,
+            self.open_high,
+            self.open_med,
+            self.open_low,
+        ) = self.get_state_data("open", repo_dict)
+
+        (
+            self.total_fixed,
+            self.fixed_at,
+            self.fixed_crit,
+            self.fixed_high,
+            self.fixed_med,
+            self.fixed_low,
+        ) = self.get_state_data("fixed", repo_dict)
+
+        (
+            self.total_dismissed,
+            self.dismissed_at,
+            self.dismissed_crit,
+            self.dismissed_high,
+            self.dismissed_med,
+            self.dismissed_low,
+        ) = self.get_state_data("dismissed", repo_dict)
+
+        (
+            self.open_npm,
+            self.open_pip,
+            self.open_rubygems,
+            self.open_nuget,
+            self.open_maven,
+            self.open_composer,
+            self.open_rust,
+            self.open_unknown,
+        ) = self.get_eco_data("open", repo_dict)
+
+        (
+            self.fixed_npm,
+            self.fixed_pip,
+            self.fixed_rubygems,
+            self.fixed_nuget,
+            self.fixed_maven,
+            self.fixed_composer,
+            self.fixed_rust,
+            self.fixed_unknown,
+        ) = self.get_eco_data("fixed", repo_dict)
+
+        (
+            self.dismissed_npm,
+            self.dismissed_pip,
+            self.dismissed_rubygems,
+            self.dismissed_nuget,
+            self.dismissed_maven,
+            self.dismissed_composer,
+            self.dismissed_rust,
+            self.dismissed_unknown,
+        ) = self.get_eco_data("dismissed", repo_dict)
+
+        self.priority = self.get_crit_high_sum()
+
+    def get_language(self, item_dict, eco_dict):
+
+        if item_dict["dependency"]["package"]["ecosystem"] == "npm":
+            eco_dict["npm"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "pip":
+            eco_dict["pip"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "rubygems":
+            eco_dict["rubygems"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "nuget":
+            eco_dict["nuget"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "maven":
+            eco_dict["maven"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "composer":
+            eco_dict["composer"] += 1
+        elif item_dict["dependency"]["package"]["ecosystem"] == "rust":
+            eco_dict["rust"] += 1
+        else:
+            eco_dict["unknown"] += 1
+
+        return eco_dict
+
+    def get_eco_data(self, state, repo_dict):
+
+        get_eco_dict = {
+            "npm": 0,
+            "pip": 0,
+            "rubygems": 0,
+            "nuget": 0,
+            "maven": 0,
+            "composer": 0,
+            "rust": 0,
+            "unknown": 0,
+        }
+
+        for item in repo_dict:
+
+            if item["state"] == state:
+                if state == "open":
+                    get_eco_dict = self.get_language(item, get_eco_dict)
+                if state == "fixed":
+                    get_eco_dict = self.get_language(item, get_eco_dict)
+                if state == "dismissed":
+                    get_eco_dict = self.get_language(item, get_eco_dict)
+
+        return (
+            get_eco_dict["npm"],
+            get_eco_dict["pip"],
+            get_eco_dict["rubygems"],
+            get_eco_dict["nuget"],
+            get_eco_dict["maven"],
+            get_eco_dict["composer"],
+            get_eco_dict["rust"],
+            get_eco_dict["unknown"],
+        )
+
+    def get_state_data(self, state, repo_dict):
+
+        total = 0
+        date_list = []
+        crit = 0
+        high = 0
+        med = 0
+        low = 0
+        date = ""
+
+        for item in repo_dict:
+            if item["state"] == state:
+                total += 1
+
+                if state == "open":
+                    temp_pub_at_date = item["security_advisory"][
+                        "published_at"
+                    ]
+                    date_list.append(
+                        datetime.strptime(
+                            temp_pub_at_date, "%Y-%m-%dT%H:%M:%SZ"
+                        )
+                    )
+                    date = str(min(date_list))
+
+                if state == "fixed":
+                    temp_fixed_at_date = item["fixed_at"]
+                    date_list.append(
+                        datetime.strptime(
+                            temp_fixed_at_date, "%Y-%m-%dT%H:%M:%SZ"
+                        )
+                    )
+                    date = str(max(date_list))
+
+                if state == "dismissed":
+                    temp_dismissed_at_date = item["dismissed_at"]
+                    date_list.append(
+                        datetime.strptime(
+                            temp_dismissed_at_date, "%Y-%m-%dT%H:%M:%SZ"
+                        )
+                    )
+                    date = str(max(date_list))
+
+                if item["security_advisory"]["severity"] == "critical":
+                    crit += 1
+                elif item["security_advisory"]["severity"] == "high":
+                    high += 1
+                elif item["security_advisory"]["severity"] == "medium":
+                    med += 1
+                else:
+                    low += 1
+
+        return (
+            total,
+            date,
+            crit,
+            high,
+            med,
+            low,
+        )
+
+    def get_crit_high_sum(self):
+        return self.open_crit + self.open_high
 
 
 def get_repo_list():
@@ -58,9 +246,6 @@ def get_dependabot_alerts(non_archived):
     repo_vulns = []
     final_list = []
 
-    temp_list = []
-    temp_temp_list = []
-
     http = urllib3.PoolManager()
     # set args for http request
     req_headers = {
@@ -97,19 +282,13 @@ def get_dependabot_alerts(non_archived):
                     "GET", url, fields=req_fields, headers=req_headers
                 )
                 json_resp = json.loads(resp.data.decode("utf-8"))
-                print(f"json_resp: {type(json_resp)}")
-                print(f"json_resp[0]: {type(json_resp[0])}")
                 temp_vulns.append(json_resp)
                 page += 1
-            # flatten the list of lists, then add it as single item to a
+            # flatten the list of lists, then add it as single list to a
             # list - each item in the final list representing
             # a single repo of dependabot information
-            # keep
             repo_vulns = sum(temp_vulns, [])
             final_list.append(repo_vulns)
-            ####
-
-            print(type(json_resp[0]))
 
         else:
             json_resp = json.loads(resp.data.decode("utf-8"))
@@ -124,47 +303,63 @@ def get_dependabot_alerts(non_archived):
                 repos_with_vulns.append(repo_name)
                 final_list.append(json_resp)
 
-    print()
-    print(f"repos_no_vulns: {repos_no_vulns}")
-    print(f"repos_disabled: {repos_disabled}")
-    print(f"repos_with_vulns: {repos_with_vulns}")
-
-    print()
-    # print(f"final_list: {final_list}")
-    print(f"len final_list: {len(final_list)}")
-    print(f"type final_list: {type(final_list)}")
-    print()
-    print(f"len final_list[0]: {len(final_list[0])}")
-    print(f"type final_list[0]: {type(final_list[0])}")
-    print()
-    #    print(f"len final_list[1]: {len(final_list[1])}")
-    #    print(f"type final_list[1]: {type(final_list[1])}")
-    #    print()
-    #    print(f"len final_list[2]: {len(final_list[2])}")
-    #    print(f"type final_list[2]: {type(final_list[2])}")
-    #    print()
-    # print(f"len final_list[3]: {len(final_list[3])}")
-    # print(f"type final_list[3]: {type(final_list[3])}")
-
-    # print(f"type final_list[0][0]: {type(final_list[0][0])}")
-
-    with open("all_data.json", "w", encoding="utf-8") as all_json_data_file:
-        json.dump(
-            final_list,
-            all_json_data_file,
-            indent=4,
-            sort_keys=False,
-            ensure_ascii=False,
-        )
+    return repos_no_vulns, repos_with_vulns, repos_disabled, final_list
 
 
 def main():
 
-    # non_archived, archived = get_repo_list("procurify")
-    # non_archived, archived = get_repo_list()
+    all_data = []
+
+    non_archived, archived = get_repo_list()
     # print(non_archived)
 
-    get_dependabot_alerts(non_archived)
+    (
+        repos_no_vulns,
+        repos_vulns,
+        repos_disabled,
+        vulns_json_data,
+    ) = get_dependabot_alerts(non_archived)
+
+    # create object for every repo with respective alert information
+    for repo in range(len(vulns_json_data)):
+        repo = Repo(repos_vulns[repo], vulns_json_data[repo])
+
+        all_data.append(vars(repo))
+
+    # sort rows based on "priority" column
+    sorted_data = sorted(all_data, key=lambda d: d["priority"], reverse=True)
+
+    repo_header = all_data[0].keys()
+
+    all_data_csv = "all_data.csv"
+
+    with open(all_data_csv, "w") as all_data_file:
+        writer = csv.DictWriter(all_data_file, fieldnames=repo_header)
+        writer.writeheader()
+        writer.writerows(sorted_data)
+
+    print(f"CSV of all dependabot repos written to {all_data_csv}")
+
+    all_data_txt = "all_data.txt"
+
+    with open(all_data_txt, "w") as all_data_file:
+        pp = pprint.PrettyPrinter(
+            depth=4, sort_dicts=False, stream=all_data_file
+        )
+        pp.pprint(sorted_data)
+
+    print(f"Text file of all dependabot repos written to {all_data_txt}")
+
+
+# to write all json data locally
+#    with open("all_data.json", "w", encoding="utf-8") as all_json_data_file:
+#        json.dump(
+#            vulns_json_data,
+#            all_json_data_file,
+#            indent=4,
+#            sort_keys=False,
+#            ensure_ascii=False,
+#        )
 
 
 if __name__ == "__main__":
