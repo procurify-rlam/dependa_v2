@@ -306,7 +306,9 @@ def get_dependabot_alerts(non_archived):
     return repos_no_vulns, repos_with_vulns, repos_disabled, vulns_json_data
 
 
-def get_org_data(repos_no_vulns, repos_with_vulns, repos_disabled, json_data):
+def get_org_data(
+    repos_no_vulns, repos_with_vulns, repos_disabled, parsed_data
+):
 
     num_no_vulns = len(repos_no_vulns)
     num_with_vulns = len(repos_with_vulns)
@@ -333,37 +335,56 @@ def get_org_data(repos_no_vulns, repos_with_vulns, repos_disabled, json_data):
         "open unknown": 0,
     }
 
-    #    print()
-    #    print(f"json_data: {type(json_data)}")
-    #    print(f"json_data[0]: {type(json_data[0])}")
-    #    print(f"json_data[0][0]: {type(json_data[0])}")
-    #    print()
-    #
-    #    print(json_data[0])
-    #    print()
-
-    for data in range(len(vulns_json_data)):
-        org_data["open critical"] += vulns_json_data[data]["open_crit"]
-        org_data["open high"] += vulns_json_data[data]["open_high"]
-        org_data["open medium"] += vulns_json_data[data]["open_med"]
-        org_data["open low"] += vulns_json_data[data]["open_low"]
-        org_data["open npm"] += vulns_json_data[data]["open_npm"]
-        org_data["open pip"] += vulns_json_data[data]["open_pip"]
-        org_data["open rubygems"] += vulns_json_data[data]["open_rubygems"]
-        org_data["open nuget"] += vulns_json_data[data]["open_nuget"]
-        org_data["open maven"] += vulns_json_data[data]["open_maven"]
-        org_data["open composer"] += vulns_json_data[data]["open_composer"]
-        org_data["open rust"] += vulns_json_data[data]["open_rust"]
-        org_data["open unknown"] += vulns_json_data[data]["open_unknown"]
+    for data in range(len(parsed_data)):
+        org_data["open critical"] += parsed_data[data]["open_crit"]
+        org_data["open high"] += parsed_data[data]["open_high"]
+        org_data["open medium"] += parsed_data[data]["open_med"]
+        org_data["open low"] += parsed_data[data]["open_low"]
+        org_data["open npm"] += parsed_data[data]["open_npm"]
+        org_data["open pip"] += parsed_data[data]["open_pip"]
+        org_data["open rubygems"] += parsed_data[data]["open_rubygems"]
+        org_data["open nuget"] += parsed_data[data]["open_nuget"]
+        org_data["open maven"] += parsed_data[data]["open_maven"]
+        org_data["open composer"] += parsed_data[data]["open_composer"]
+        org_data["open rust"] += parsed_data[data]["open_rust"]
+        org_data["open unknown"] += parsed_data[data]["open_unknown"]
 
     return org_data
 
 
+def write_csv_data(sorted_data):
+
+    repo_header = sorted_data[0].keys()
+    parsed_data_csv = "parsed_data.csv"
+
+    with open(parsed_data_csv, "w") as parsed_data_file:
+        writer = csv.DictWriter(parsed_data_file, fieldnames=repo_header)
+        writer.writeheader()
+        writer.writerows(sorted_data)
+
+    print()
+    print(f"CSV of all dependabot repos written to {parsed_data_csv}")
+
+
+def write_txt_data(sorted_data):
+
+    parsed_data_txt = "parsed_data.txt"
+
+    with open(parsed_data_txt, "w") as parsed_data_file:
+        pp = pprint.PrettyPrinter(
+            depth=4, sort_dicts=False, stream=parsed_data_file
+        )
+        pp.pprint(sorted_data)
+
+    print()
+    print(f"Text file of all dependabot repos written to {parsed_data_txt}")
+
+
 def main():
 
-    all_data = []
+    parsed_data = []
 
-    # non_archived, archived = get_repo_list()
+    non_archived, archived = get_repo_list()
     # print(non_archived)
 
     (
@@ -377,45 +398,26 @@ def main():
     for repo in range(len(vulns_json_data)):
         repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
 
-        all_data.append(vars(repo))
+        parsed_data.append(vars(repo))
 
     # sort rows based on "priority" column
-    sorted_data = sorted(all_data, key=lambda d: d["priority"], reverse=True)
-
-    print()
-    # print(all_data)
-    print()
-
-    repo_header = all_data[0].keys()
-
-    all_data_csv = "all_data.csv"
-
-    with open(all_data_csv, "w") as all_data_file:
-        writer = csv.DictWriter(all_data_file, fieldnames=repo_header)
-        writer.writeheader()
-        writer.writerows(sorted_data)
-
-    print(f"CSV of all dependabot repos written to {all_data_csv}")
-
-    all_data_txt = "all_data.txt"
-
-    with open(all_data_txt, "w") as all_data_file:
-        pp = pprint.PrettyPrinter(
-            depth=4, sort_dicts=False, stream=all_data_file
-        )
-        pp.pprint(sorted_data)
-
-    print(f"Text file of all dependabot repos written to {all_data_txt}")
-
-    org_data = get_org_data(
-        repos_no_vulns, repos_with_vulns, repos_disabled, all_data
+    sorted_data = sorted(
+        parsed_data, key=lambda d: d["priority"], reverse=True
     )
 
+    write_csv_data(sorted_data)
+    write_txt_data(sorted_data)
+
+    org_data = get_org_data(
+        repos_no_vulns, repos_with_vulns, repos_disabled, sorted_data
+    )
+
+    print()
     print(org_data)
 
 
 # to write all json data locally
-#    with open("all_data.json", "w", encoding="utf-8") as all_json_data_file:
+#    with open("parsed_data.json", "w", encoding="utf-8") as all_json_data_file:
 #        json.dump(
 #            vulns_json_data,
 #            all_json_data_file,
