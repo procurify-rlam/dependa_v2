@@ -244,7 +244,7 @@ def get_dependabot_alerts(non_archived):
     repos_with_vulns = []
     repos_disabled = []
     repo_vulns = []
-    final_list = []
+    vulns_json_data = []
 
     http = urllib3.PoolManager()
     # set args for http request
@@ -288,7 +288,7 @@ def get_dependabot_alerts(non_archived):
             # list - each item in the final list representing
             # a single repo of dependabot information
             repo_vulns = sum(temp_vulns, [])
-            final_list.append(repo_vulns)
+            vulns_json_data.append(repo_vulns)
 
         else:
             json_resp = json.loads(resp.data.decode("utf-8"))
@@ -301,33 +301,90 @@ def get_dependabot_alerts(non_archived):
             else:
                 # less than 30 dependabot alerts associated with the repo
                 repos_with_vulns.append(repo_name)
-                final_list.append(json_resp)
+                vulns_json_data.append(json_resp)
 
-    return repos_no_vulns, repos_with_vulns, repos_disabled, final_list
+    return repos_no_vulns, repos_with_vulns, repos_disabled, vulns_json_data
+
+
+def get_org_data(repos_no_vulns, repos_with_vulns, repos_disabled, json_data):
+
+    num_no_vulns = len(repos_no_vulns)
+    num_with_vulns = len(repos_with_vulns)
+    num_disabled = len(repos_disabled)
+
+    total_repos = num_no_vulns + num_with_vulns + num_disabled
+
+    org_data = {
+        "Total Number of Repos": total_repos,
+        "Repos with alerts": num_with_vulns,
+        "Repos without alerts": num_no_vulns,
+        "Repos disabled alerts": num_disabled,
+        "open critical": 0,
+        "open high": 0,
+        "open medium": 0,
+        "open low": 0,
+        "open npm": 0,
+        "open pip": 0,
+        "open rubygems": 0,
+        "open nuget": 0,
+        "open maven": 0,
+        "open composer": 0,
+        "open rust": 0,
+        "open unknown": 0,
+    }
+
+    #    print()
+    #    print(f"json_data: {type(json_data)}")
+    #    print(f"json_data[0]: {type(json_data[0])}")
+    #    print(f"json_data[0][0]: {type(json_data[0])}")
+    #    print()
+    #
+    #    print(json_data[0])
+    #    print()
+
+    for data in range(len(vulns_json_data)):
+        org_data["open critical"] += vulns_json_data[data]["open_crit"]
+        org_data["open high"] += vulns_json_data[data]["open_high"]
+        org_data["open medium"] += vulns_json_data[data]["open_med"]
+        org_data["open low"] += vulns_json_data[data]["open_low"]
+        org_data["open npm"] += vulns_json_data[data]["open_npm"]
+        org_data["open pip"] += vulns_json_data[data]["open_pip"]
+        org_data["open rubygems"] += vulns_json_data[data]["open_rubygems"]
+        org_data["open nuget"] += vulns_json_data[data]["open_nuget"]
+        org_data["open maven"] += vulns_json_data[data]["open_maven"]
+        org_data["open composer"] += vulns_json_data[data]["open_composer"]
+        org_data["open rust"] += vulns_json_data[data]["open_rust"]
+        org_data["open unknown"] += vulns_json_data[data]["open_unknown"]
+
+    return org_data
 
 
 def main():
 
     all_data = []
 
-    non_archived, archived = get_repo_list()
+    # non_archived, archived = get_repo_list()
     # print(non_archived)
 
     (
         repos_no_vulns,
-        repos_vulns,
+        repos_with_vulns,
         repos_disabled,
         vulns_json_data,
     ) = get_dependabot_alerts(non_archived)
 
     # create object for every repo with respective alert information
     for repo in range(len(vulns_json_data)):
-        repo = Repo(repos_vulns[repo], vulns_json_data[repo])
+        repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
 
         all_data.append(vars(repo))
 
     # sort rows based on "priority" column
     sorted_data = sorted(all_data, key=lambda d: d["priority"], reverse=True)
+
+    print()
+    # print(all_data)
+    print()
 
     repo_header = all_data[0].keys()
 
@@ -349,6 +406,12 @@ def main():
         pp.pprint(sorted_data)
 
     print(f"Text file of all dependabot repos written to {all_data_txt}")
+
+    org_data = get_org_data(
+        repos_no_vulns, repos_with_vulns, repos_disabled, all_data
+    )
+
+    print(org_data)
 
 
 # to write all json data locally
