@@ -13,188 +13,131 @@ from datetime import datetime
 class Repo:
     def __init__(self, name, repo_dict):
 
-        self.name = name
-
         (
-            self.total_open,
-            self.published_at,
-            self.open_crit,
-            self.open_high,
-            self.open_med,
-            self.open_low,
-        ) = self.get_state_data("open", repo_dict)
+            state_open,
+            state_fixed,
+            state_dismissed,
+        ) = self.get_state_data(repo_dict)
 
-        (
-            self.total_fixed,
-            self.fixed_at,
-            self.fixed_crit,
-            self.fixed_high,
-            self.fixed_med,
-            self.fixed_low,
-        ) = self.get_state_data("fixed", repo_dict)
-
-        (
-            self.total_dismissed,
-            self.dismissed_at,
-            self.dismissed_crit,
-            self.dismissed_high,
-            self.dismissed_med,
-            self.dismissed_low,
-        ) = self.get_state_data("dismissed", repo_dict)
-
-        (
-            self.open_npm,
-            self.open_pip,
-            self.open_rubygems,
-            self.open_nuget,
-            self.open_maven,
-            self.open_composer,
-            self.open_rust,
-            self.open_unknown,
-        ) = self.get_eco_data("open", repo_dict)
-
-        (
-            self.fixed_npm,
-            self.fixed_pip,
-            self.fixed_rubygems,
-            self.fixed_nuget,
-            self.fixed_maven,
-            self.fixed_composer,
-            self.fixed_rust,
-            self.fixed_unknown,
-        ) = self.get_eco_data("fixed", repo_dict)
-
-        (
-            self.dismissed_npm,
-            self.dismissed_pip,
-            self.dismissed_rubygems,
-            self.dismissed_nuget,
-            self.dismissed_maven,
-            self.dismissed_composer,
-            self.dismissed_rust,
-            self.dismissed_unknown,
-        ) = self.get_eco_data("dismissed", repo_dict)
-
-        self.priority = self.get_crit_high_sum()
-
-    def get_language(self, item_dict, eco_dict):
-
-        if item_dict["dependency"]["package"]["ecosystem"] == "npm":
-            eco_dict["npm"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "pip":
-            eco_dict["pip"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "rubygems":
-            eco_dict["rubygems"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "nuget":
-            eco_dict["nuget"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "maven":
-            eco_dict["maven"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "composer":
-            eco_dict["composer"] += 1
-        elif item_dict["dependency"]["package"]["ecosystem"] == "rust":
-            eco_dict["rust"] += 1
-        else:
-            eco_dict["unknown"] += 1
-
-        return eco_dict
-
-    def get_eco_data(self, state, repo_dict):
-
-        get_eco_dict = {
-            "npm": 0,
-            "pip": 0,
-            "rubygems": 0,
-            "nuget": 0,
-            "maven": 0,
-            "composer": 0,
-            "rust": 0,
-            "unknown": 0,
+        combined_data = {
+            **state_open,
+            **state_fixed,
+            **state_dismissed,
         }
 
+        # returned the parsed data as a single large dictionary
+        self.parsed_data = {"Name": name}
+        self.parsed_data.update(combined_data)
+
+    def get_state_data(self, repo_dict):
+
+        # template dictionary keys; allows reuse of nested parse_data function
+        state_template = {
+            "Total": 0,
+            "Crit": 0,
+            "High": 0,
+            "Med": 0,
+            "Low": 0,
+            "Date": "",
+            "Npm": 0,
+            "Pip": 0,
+            "Rubygems": 0,
+            "Nuget": 0,
+            "Maven": 0,
+            "Composer": 0,
+            "Rust": 0,
+            "Unknown": 0,
+        }
+        state_open = dict(state_template)
+        date_list_open = []
+
+        state_fixed = dict(state_template)
+        date_list_fixed = []
+
+        state_dismissed = dict(state_template)
+        date_list_dismissed = []
+
+        def parse_data(item_dict, parsed_dict):
+
+            parsed_dict["Total"] += 1
+
+            if item_dict["security_advisory"]["severity"] == "critical":
+                parsed_dict["Crit"] += 1
+            elif item_dict["security_advisory"]["severity"] == "high":
+                parsed_dict["High"] += 1
+            elif item_dict["security_advisory"]["severity"] == "medium":
+                parsed_dict["Med"] += 1
+            else:
+                parsed_dict["Low"] += 1
+
+            if item_dict["dependency"]["package"]["ecosystem"] == "npm":
+                parsed_dict["Npm"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "pip":
+                parsed_dict["Pip"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "rubygems":
+                parsed_dict["Rubygems"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "nuget":
+                parsed_dict["Nuget"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "maven":
+                parsed_dict["Maven"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "composer":
+                parsed_dict["Composer"] += 1
+            elif item_dict["dependency"]["package"]["ecosystem"] == "rust":
+                parsed_dict["Rust"] += 1
+            else:
+                parsed_dict["Unknown"] += 1
+
+            return parsed_dict
+
         for item in repo_dict:
+            if item["state"] == "open":
+                state_open = parse_data(item, state_open)
 
-            if item["state"] == state:
-                if state == "open":
-                    get_eco_dict = self.get_language(item, get_eco_dict)
-                if state == "fixed":
-                    get_eco_dict = self.get_language(item, get_eco_dict)
-                if state == "dismissed":
-                    get_eco_dict = self.get_language(item, get_eco_dict)
+                # keep only first reported open alert date
+                temp_pub_at_date = item["security_advisory"]["published_at"]
+                date_list_open.append(
+                    datetime.strptime(temp_pub_at_date, "%Y-%m-%dT%H:%M:%SZ")
+                )
+                state_open["Date"] = str(min(date_list_open))
 
-        return (
-            get_eco_dict["npm"],
-            get_eco_dict["pip"],
-            get_eco_dict["rubygems"],
-            get_eco_dict["nuget"],
-            get_eco_dict["maven"],
-            get_eco_dict["composer"],
-            get_eco_dict["rust"],
-            get_eco_dict["unknown"],
-        )
+            elif item["state"] == "fixed":
+                state_fixed = parse_data(item, state_fixed)
 
-    def get_state_data(self, state, repo_dict):
+                # keep only most recent fixed alert date
+                temp_fixed_at_date = item["fixed_at"]
+                date_list_fixed.append(
+                    datetime.strptime(temp_fixed_at_date, "%Y-%m-%dT%H:%M:%SZ")
+                )
+                state_fixed["Date"] = str(max(date_list_fixed))
 
-        total = 0
-        date_list = []
-        crit = 0
-        high = 0
-        med = 0
-        low = 0
-        date = ""
+            elif item["state"] == "dismissed":
+                state_dismissed = parse_data(item, state_dismissed)
 
-        for item in repo_dict:
-            if item["state"] == state:
-                total += 1
-
-                if state == "open":
-                    temp_pub_at_date = item["security_advisory"][
-                        "published_at"
-                    ]
-                    date_list.append(
-                        datetime.strptime(
-                            temp_pub_at_date, "%Y-%m-%dT%H:%M:%SZ"
-                        )
+                # keep only most recent dismissed alert date
+                temp_dismissed_at_date = item["dismissed_at"]
+                date_list_dismissed.append(
+                    datetime.strptime(
+                        temp_dismissed_at_date, "%Y-%m-%dT%H:%M:%SZ"
                     )
-                    date = str(min(date_list))
+                )
+                state_dismissed["Date"] = str(max(date_list_dismissed))
 
-                if state == "fixed":
-                    temp_fixed_at_date = item["fixed_at"]
-                    date_list.append(
-                        datetime.strptime(
-                            temp_fixed_at_date, "%Y-%m-%dT%H:%M:%SZ"
-                        )
-                    )
-                    date = str(max(date_list))
+        # amend the dictionaries keys to reflect the state data
+        state_open = {
+            f"Open {key}": value for key, value in state_open.items()
+        }
+        state_fixed = {
+            f"Fixed {key}": value for key, value in state_fixed.items()
+        }
+        state_dismissed = {
+            f"Dismissed {key}": value for key, value in state_dismissed.items()
+        }
 
-                if state == "dismissed":
-                    temp_dismissed_at_date = item["dismissed_at"]
-                    date_list.append(
-                        datetime.strptime(
-                            temp_dismissed_at_date, "%Y-%m-%dT%H:%M:%SZ"
-                        )
-                    )
-                    date = str(max(date_list))
+        # set a priority level for remediation for open alerts
+        priority = state_open["Open Crit"] + state_open["Open High"]
+        state_open["Priority"] = priority
 
-                if item["security_advisory"]["severity"] == "critical":
-                    crit += 1
-                elif item["security_advisory"]["severity"] == "high":
-                    high += 1
-                elif item["security_advisory"]["severity"] == "medium":
-                    med += 1
-                else:
-                    low += 1
-
-        return (
-            total,
-            date,
-            crit,
-            high,
-            med,
-            low,
-        )
-
-    def get_crit_high_sum(self):
-        return self.open_crit + self.open_high
+        return state_open, state_fixed, state_dismissed
 
 
 def get_repo_list():
@@ -268,7 +211,7 @@ def get_dependabot_alerts(non_archived):
         resp = http.request("GET", url, headers=req_headers)
         json_resp_header = dict(resp.headers)
 
-        # if 30 or more items, the response will be paginated,
+        # if 30 or more items, response will be paginated,
         # find last page to query
         if "Link" in json_resp_header:
             pages_regex = re.findall(r"page=\d+", json_resp_header["Link"])
@@ -313,7 +256,6 @@ def get_org_data(
     num_no_vulns = len(repos_no_vulns)
     num_with_vulns = len(repos_with_vulns)
     num_disabled = len(repos_disabled)
-
     total_repos = num_no_vulns + num_with_vulns + num_disabled
 
     org_data = {
@@ -321,33 +263,33 @@ def get_org_data(
         "Repos with alerts": num_with_vulns,
         "Repos without alerts": num_no_vulns,
         "Repos disabled alerts": num_disabled,
-        "open critical": 0,
-        "open high": 0,
-        "open medium": 0,
-        "open low": 0,
-        "open npm": 0,
-        "open pip": 0,
-        "open rubygems": 0,
-        "open nuget": 0,
-        "open maven": 0,
-        "open composer": 0,
-        "open rust": 0,
-        "open unknown": 0,
+        "Open Critical": 0,
+        "Open High": 0,
+        "Open Medium": 0,
+        "Open Low": 0,
+        "Open Npm": 0,
+        "Open Pip": 0,
+        "Open Rubygems": 0,
+        "Open Nuget": 0,
+        "Open Maven": 0,
+        "Open Composer": 0,
+        "Open Rust": 0,
+        "Open Unknown": 0,
     }
 
     for data in range(len(parsed_data)):
-        org_data["open critical"] += parsed_data[data]["open_crit"]
-        org_data["open high"] += parsed_data[data]["open_high"]
-        org_data["open medium"] += parsed_data[data]["open_med"]
-        org_data["open low"] += parsed_data[data]["open_low"]
-        org_data["open npm"] += parsed_data[data]["open_npm"]
-        org_data["open pip"] += parsed_data[data]["open_pip"]
-        org_data["open rubygems"] += parsed_data[data]["open_rubygems"]
-        org_data["open nuget"] += parsed_data[data]["open_nuget"]
-        org_data["open maven"] += parsed_data[data]["open_maven"]
-        org_data["open composer"] += parsed_data[data]["open_composer"]
-        org_data["open rust"] += parsed_data[data]["open_rust"]
-        org_data["open unknown"] += parsed_data[data]["open_unknown"]
+        org_data["Open Critical"] += parsed_data[data]["Open Crit"]
+        org_data["Open High"] += parsed_data[data]["Open High"]
+        org_data["Open Medium"] += parsed_data[data]["Open Med"]
+        org_data["Open Low"] += parsed_data[data]["Open Low"]
+        org_data["Open Npm"] += parsed_data[data]["Open Npm"]
+        org_data["Open Pip"] += parsed_data[data]["Open Pip"]
+        org_data["Open Rubygems"] += parsed_data[data]["Open Rubygems"]
+        org_data["Open Nuget"] += parsed_data[data]["Open Nuget"]
+        org_data["Open Maven"] += parsed_data[data]["Open Maven"]
+        org_data["Open Composer"] += parsed_data[data]["Open Composer"]
+        org_data["Open Rust"] += parsed_data[data]["Open Rust"]
+        org_data["Open Unknown"] += parsed_data[data]["Open Unknown"]
 
     return org_data
 
@@ -385,7 +327,6 @@ def main():
     parsed_data = []
 
     non_archived, archived = get_repo_list()
-    # print(non_archived)
 
     (
         repos_no_vulns,
@@ -398,11 +339,11 @@ def main():
     for repo in range(len(vulns_json_data)):
         repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
 
-        parsed_data.append(vars(repo))
+        parsed_data.append(repo.parsed_data)
 
     # sort rows based on "priority" column
     sorted_data = sorted(
-        parsed_data, key=lambda d: d["priority"], reverse=True
+        parsed_data, key=lambda d: d["Priority"], reverse=True
     )
 
     write_csv_data(sorted_data)
@@ -414,17 +355,6 @@ def main():
 
     print()
     print(org_data)
-
-
-# to write all json data locally
-#    with open("parsed_data.json", "w", encoding="utf-8") as all_json_data_file:
-#        json.dump(
-#            vulns_json_data,
-#            all_json_data_file,
-#            indent=4,
-#            sort_keys=False,
-#            ensure_ascii=False,
-#        )
 
 
 if __name__ == "__main__":
