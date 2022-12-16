@@ -327,7 +327,6 @@ def main():
     parsed_data = []
 
     non_archived, archived = get_repo_list()
-
     (
         repos_no_vulns,
         repos_with_vulns,
@@ -338,7 +337,6 @@ def main():
     # create object for every repo with respective alert information
     for repo in range(len(vulns_json_data)):
         repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
-
         parsed_data.append(repo.parsed_data)
 
     # sort rows based on "priority" column
@@ -370,7 +368,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if len(sys.argv) == 1:
-        print("Please provide an organiztion to query.")
+        print("Please provide an organization name to query.")
         print()
         print(f"python3 {sys.argv[0]} <name of org>")
         print(f"IE: python3 {sys.argv[0]} procurify")
