@@ -322,11 +322,64 @@ def write_txt_data(sorted_data):
     print(f"Text file of all dependabot repos written to {parsed_data_txt}")
 
 
+def add_text_data(info):
+    """Create code block to send to slack channel"""
+
+    repo_text = f"```"
+    repo_text += f'{"Repo".ljust(7)}{info["Name"].rjust(40)}\n'
+    repo_text += (
+        f'{"Total Open".ljust(7)}{str(info["Open Total"]).rjust(30)}\n'
+    )
+    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).rjust(33)}\n'
+    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).rjust(33)}\n'
+    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).rjust(33)}\n'
+    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).rjust(33)}\n'
+    repo_text += f"```"
+    repo_text += f"\n"
+
+    return repo_text
+
+
+def send_to_slack(repo_text):
+
+    http = urllib3.PoolManager()
+
+    repo_data = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "Top Five Repos - Dependabot Alerts Severity",
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": repo_text,
+                },
+            },
+            {"type": "divider"},
+        ]
+    }
+
+    r = http.request(
+        "POST",
+        slack_webhook,
+        body=json.dumps(repo_data),
+        headers={"Content-type": "application/json"},
+    )
+    # print(r.status)
+    print()
+    print("http first request done")
+
+
 def main():
 
     parsed_data = []
-
     non_archived, archived = get_repo_list()
+
     (
         repos_no_vulns,
         repos_with_vulns,
@@ -344,8 +397,22 @@ def main():
         parsed_data, key=lambda d: d["Priority"], reverse=True
     )
 
-    write_csv_data(sorted_data)
-    write_txt_data(sorted_data)
+    print()
+    print(f"type sorted_data: {type(sorted_data)}")
+    print()
+    print(f"type sorted_data[0]: {type(sorted_data[0])}")
+    print()
+
+    NUM_REPOS_REPORT = 5
+
+    repo_text = ""
+    for number in range(NUM_REPOS_REPORT):
+        repo_text += add_text_data(sorted_data[number])
+
+    send_to_slack(repo_text)
+
+    # write_csv_data(sorted_data)
+    # write_txt_data(sorted_data)
 
     org_data = get_org_data(
         repos_no_vulns, repos_with_vulns, repos_disabled, sorted_data
@@ -357,7 +424,7 @@ def main():
 
 if __name__ == "__main__":
 
-    # keep auth and org values global in scope
+    # keep auth, org, slack_webhook values global in scope
     try:
         apikey = os.environ["GH_API_KEY"]
         auth = "Bearer " + apikey
@@ -365,6 +432,14 @@ if __name__ == "__main__":
         print("GH_API_KEY environment variable not set")
         print("Please set the Github API via environment variable.")
         print("Eg. export GH_API_KEY=ghp_XXXXXXXXXXXXXXXXXXXXX")
+        sys.exit(1)
+
+    try:
+        slack_webhook = os.environ["SLACK_URL"]
+    except KeyError:
+        print("SLACK_URL environment variable not set")
+        print("Please set the SLACK_URL via environment variable.")
+        print("Eg. export SLACK_URL=https://hooks.slack.com/services/XXXXXXXX")
         sys.exit(1)
 
     if len(sys.argv) == 1:
