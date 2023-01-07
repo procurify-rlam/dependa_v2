@@ -11,6 +11,8 @@ from datetime import datetime
 
 
 class Repo:
+    """parse data for the repo and return dictionary of relevant information"""
+
     def __init__(self, name, repo_dict):
 
         (
@@ -30,8 +32,7 @@ class Repo:
         self.parsed_data.update(combined_data)
 
     def get_state_data(self, repo_dict):
-
-        # template dictionary keys; allows reuse of nested parse_data function
+        """template dictionary keys; allows reuse of nested parse_data function"""
         state_template = {
             "Total": 0,
             "Crit": 0,
@@ -141,7 +142,7 @@ class Repo:
 
 
 def get_repo_list():
-
+    """retrieve list of all repos for the organization indicate"""
     http = urllib3.PoolManager()
     # set args for http request
     all_repo_list = []
@@ -182,7 +183,7 @@ def get_repo_list():
 
 
 def get_dependabot_alerts(non_archived):
-
+    """retrieve all dependabot data for active repos"""
     repos_no_vulns = []
     repos_with_vulns = []
     repos_disabled = []
@@ -252,7 +253,7 @@ def get_dependabot_alerts(non_archived):
 def get_org_data(
     repos_no_vulns, repos_with_vulns, repos_disabled, parsed_data
 ):
-
+    """calculate org data; return dictionary"""
     num_no_vulns = len(repos_no_vulns)
     num_with_vulns = len(repos_with_vulns)
     num_disabled = len(repos_disabled)
@@ -294,18 +295,32 @@ def get_org_data(
     return org_data
 
 
-def write_csv_data(sorted_data):
+def write_org_csv_data(data):
 
-    repo_header = sorted_data[0].keys()
+    header = data.keys()
+    parsed_data_csv = "org_data.csv"
+
+    with open(parsed_data_csv, "w") as parsed_data_file:
+        writer = csv.DictWriter(parsed_data_file, fieldnames=header)
+        writer.writeheader()
+        writer.writerow(data)
+
+    print()
+    print(f"Org data written to {parsed_data_csv}")
+
+
+def write_csv_data(data):
+
+    header = data[0].keys()
     parsed_data_csv = "parsed_data.csv"
 
     with open(parsed_data_csv, "w") as parsed_data_file:
-        writer = csv.DictWriter(parsed_data_file, fieldnames=repo_header)
+        writer = csv.DictWriter(parsed_data_file, fieldnames=header)
         writer.writeheader()
-        writer.writerows(sorted_data)
+        writer.writerows(data)
 
     print()
-    print(f"CSV of all dependabot repos written to {parsed_data_csv}")
+    print(f"Repo CSV data written to {parsed_data_csv}")
 
 
 def write_txt_data(sorted_data):
@@ -420,14 +435,9 @@ def main():
         text += add_text_data(org_data, data_type)
         send_to_slack(text)
     else:
-        data_type = "repo_data"
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
-        data_type = "org_data"
-        # write_csv_data(org_data)
-
-    print()
-    print(org_data)
+        write_org_csv_data(org_data)
 
 
 if __name__ == "__main__":
