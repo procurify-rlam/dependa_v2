@@ -15,23 +15,103 @@ class Repo:
 
     def __init__(self, name, repo_dict):
 
+        self.repo_dict = repo_dict
+
         (
             state_open,
             state_fixed,
             state_dismissed,
-        ) = self.get_state_data(repo_dict)
+            slos,
+        ) = self.get_state_data()
 
         combined_data = {
             **state_open,
             **state_fixed,
             **state_dismissed,
+            **slos,
         }
 
         # returned the parsed data as a single large dictionary
         self.parsed_data = {"Name": name}
         self.parsed_data.update(combined_data)
 
-    def get_state_data(self, repo_dict):
+    def get_slo(self):
+
+        CRIT_MAX_SLO_DAYS = 15
+        HIGH_MAX_SLO_DAYS = 30
+        MED_MAX_SLO_DAYS = 90
+        LOW_MAX_SLO_DAYS = 180
+
+        current_time = datetime.now()
+        slo = {
+            "Crit Exceeded": 0,
+            # "Crit Total": self.parsed_data["Open Crit"],
+            # "Crit Percentage": 0.0,
+            "High Exceeded": 0,
+            # "High Total": self.parsed_data["Open High"],
+            # "High Percentage": 0.0,
+            "Med Exceeded": 0,
+            # "Med Total": self.parsed_data["Open Med"],
+            # "Med Percentage": 0.0,
+            "Low Exceeded": 0,
+            # "Low Total": self.parsed_data["Open Low"],
+            # "Low Percentage": 0.0,
+        }
+
+        for item in self.repo_dict:
+            if item["state"] == "open":
+                if item["security_advisory"]["severity"] == "critical":
+                    temp_date = item["security_advisory"]["published_at"]
+                    temp_date_obj = datetime.strptime(
+                        temp_date, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    crit_age = current_time - temp_date_obj
+                    if crit_age.days >= CRIT_MAX_SLO_DAYS:
+                        slo["Crit Exceeded"] += 1
+
+                elif item["security_advisory"]["severity"] == "high":
+                    temp_date = item["security_advisory"]["published_at"]
+                    temp_date_obj = datetime.strptime(
+                        temp_date, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    high_age = current_time - temp_date_obj
+                    if high_age.days >= HIGH_MAX_SLO_DAYS:
+                        slo["High Exceeded"] += 1
+
+                elif item["security_advisory"]["severity"] == "medium":
+                    temp_date = item["security_advisory"]["published_at"]
+                    temp_date_obj = datetime.strptime(
+                        temp_date, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    medium_age = current_time - temp_date_obj
+                    if medium_age.days >= MED_MAX_SLO_DAYS:
+                        slo["Med Exceeded"] += 1
+
+                elif item["security_advisory"]["severity"] == "low":
+                    temp_date = item["security_advisory"]["published_at"]
+                    temp_date_obj = datetime.strptime(
+                        temp_date, "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    low_age = current_time - temp_date_obj
+                    if low_age.days >= LOW_MAX_SLO_DAYS:
+                        slo["Low Exceeded"] += 1
+
+        #        slo["Crit Percentage"] = round(
+        #            slo["Crit Exceeded"] / slo["Crit Total"] * 100, 2
+        #        )
+        #        slo["High Percentage"] = round(
+        #            slo["High Exceeded"] / slo["High Total"] * 100, 2
+        #        )
+        #        slo["Med Percentage"] = round(
+        #            slo["Med Exceeded"] / slo["Med Total"] * 100, 2
+        #        )
+        #        slo["Low Percentage"] = round(
+        #            slo["Low Exceeded"] / slo["Low Total"] * 100, 2
+        #        )
+
+        return slo
+
+    def get_state_data(self):
         """template dictionary keys; allows reuse of nested parse_data function"""
         state_template = {
             "Total": 0,
@@ -90,7 +170,7 @@ class Repo:
 
             return parsed_dict
 
-        for item in repo_dict:
+        for item in self.repo_dict:
             if item["state"] == "open":
                 state_open = parse_data(item, state_open)
 
@@ -137,8 +217,9 @@ class Repo:
         # set a priority level for remediation for open alerts
         priority = state_open["Open Crit"] + state_open["Open High"]
         state_open["Priority"] = priority
+        slo_info = self.get_slo()
 
-        return state_open, state_fixed, state_dismissed
+        return state_open, state_fixed, state_dismissed, slo_info
 
 
 def get_repo_list():
@@ -341,19 +422,21 @@ def add_text_data(info, data_type):
     """Create code block to send to slack channel"""
 
     if data_type == "repo_data":
-        header = f'{"Repo Name".ljust(7)}{info["Name"].rjust(40)}\n'
+        header = f'{"Repo Name".ljust(7)}{info["Name"].center(45)}{"No. exceeding SLO".rjust(1)}\n'
         header += (
-            f'{"Total Open".ljust(7)}{str(info["Open Total"]).rjust(30)}\n'
+            f'{"Total Open".ljust(7)}{str(info["Open Total"]).center(38)}\n'
         )
     elif data_type == "org_data":
-        header = f'{"Dependabot Alerts for all Active Repos".ljust(7)}\n'
+        header = f'{"All Active Repos".ljust(7)}\n'
+
+    var_per = "98"
 
     repo_text = f"```"
     repo_text += header
-    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).rjust(33)}\n'
-    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).rjust(33)}\n'
-    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).rjust(33)}\n'
-    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).rjust(33)}\n'
+    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(40)}     {str(info["Crit Exceeded"])+" ("+var_per+"%)"}\n'
+    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}      {str(info["High Exceeded"])+" ("+var_per+"%)"}\n'
+    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}      {str(info["Med Exceeded"])+" ("+var_per+"%)"}\n'
+    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}      {str(info["Low Exceeded"])+" ("+var_per+"%)"}\n'
     repo_text += f"```"
     repo_text += f"\n"
 
@@ -395,6 +478,7 @@ def send_to_slack(text):
 def main():
 
     parsed_data = []
+    # slos = []
     non_archived, archived = get_repo_list()
 
     (
@@ -408,6 +492,9 @@ def main():
     for repo in range(len(vulns_json_data)):
         repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
         parsed_data.append(repo.parsed_data)
+        # slos.append(repo.get_slo())
+
+    # print(slos)
 
     # sort rows based on "priority" column
     sorted_data = sorted(
@@ -431,9 +518,9 @@ def main():
             text += add_text_data(sorted_data[number], data_type)
         send_to_slack(text)
 
-        data_type = "org_data"
-        text += add_text_data(org_data, data_type)
-        send_to_slack(text)
+        # data_type = "org_data"
+        # text += add_text_data(org_data, data_type)
+        # send_to_slack(text)
     else:
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
