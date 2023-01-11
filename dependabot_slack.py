@@ -45,17 +45,9 @@ class Repo:
         current_time = datetime.now()
         slo = {
             "Crit Exceeded": 0,
-            # "Crit Total": self.parsed_data["Open Crit"],
-            # "Crit Percentage": 0.0,
             "High Exceeded": 0,
-            # "High Total": self.parsed_data["Open High"],
-            # "High Percentage": 0.0,
             "Med Exceeded": 0,
-            # "Med Total": self.parsed_data["Open Med"],
-            # "Med Percentage": 0.0,
             "Low Exceeded": 0,
-            # "Low Total": self.parsed_data["Open Low"],
-            # "Low Percentage": 0.0,
         }
 
         for item in self.repo_dict:
@@ -95,19 +87,6 @@ class Repo:
                     low_age = current_time - temp_date_obj
                     if low_age.days >= LOW_MAX_SLO_DAYS:
                         slo["Low Exceeded"] += 1
-
-        #        slo["Crit Percentage"] = round(
-        #            slo["Crit Exceeded"] / slo["Crit Total"] * 100, 2
-        #        )
-        #        slo["High Percentage"] = round(
-        #            slo["High Exceeded"] / slo["High Total"] * 100, 2
-        #        )
-        #        slo["Med Percentage"] = round(
-        #            slo["Med Exceeded"] / slo["Med Total"] * 100, 2
-        #        )
-        #        slo["Low Percentage"] = round(
-        #            slo["Low Exceeded"] / slo["Low Total"] * 100, 2
-        #        )
 
         return slo
 
@@ -218,6 +197,34 @@ class Repo:
         priority = state_open["Open Crit"] + state_open["Open High"]
         state_open["Priority"] = priority
         slo_info = self.get_slo()
+
+        if state_open["Open Crit"] > 0:
+            slo_info["Crit Percentage"] = round(
+                slo_info["Crit Exceeded"] / state_open["Open Crit"] * 100, 2
+            )
+        else:
+            slo_info["Crit Percentage"] = 0.0
+
+        if state_open["Open High"] > 0:
+            slo_info["High Percentage"] = round(
+                slo_info["High Exceeded"] / state_open["Open High"] * 100, 2
+            )
+        else:
+            slo_info["High Percentage"] = 0.0
+
+        if state_open["Open Med"] > 0:
+            slo_info["Med Percentage"] = round(
+                slo_info["Med Exceeded"] / state_open["Open Med"] * 100, 2
+            )
+        else:
+            slo_info["Med Percentage"] = 0.0
+
+        if state_open["Open Low"] > 0:
+            slo_info["Low Percentage"] = round(
+                slo_info["Low Exceeded"] / state_open["Open Low"] * 100, 2
+            )
+        else:
+            slo_info["Low Percentage"] = 0.0
 
         return state_open, state_fixed, state_dismissed, slo_info
 
@@ -421,22 +428,19 @@ def write_txt_data(sorted_data):
 def add_text_data(info, data_type):
     """Create code block to send to slack channel"""
 
-    if data_type == "repo_data":
-        header = f'{"Repo Name".ljust(7)}{info["Name"].center(45)}{"No. exceeding SLO".rjust(1)}\n'
-        header += (
-            f'{"Total Open".ljust(7)}{str(info["Open Total"]).center(38)}\n'
-        )
-    elif data_type == "org_data":
-        header = f'{"All Active Repos".ljust(7)}\n'
-
-    var_per = "98"
+    # if data_type == "repo_data":
+    # elif data_type == "org_data":
+    # header = f'{"All Active Repos".ljust(7)}\n'
 
     repo_text = f"```"
-    repo_text += header
-    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(40)}     {str(info["Crit Exceeded"])+" ("+var_per+"%)"}\n'
-    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}      {str(info["High Exceeded"])+" ("+var_per+"%)"}\n'
-    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}      {str(info["Med Exceeded"])+" ("+var_per+"%)"}\n'
-    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}      {str(info["Low Exceeded"])+" ("+var_per+"%)"}\n'
+    repo_text += f'{info["Name"].ljust(7)}                                {"No. alerts exceeding SLO".rjust(1)}\n\n'
+    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(40)}    {str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
+    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}      {str(info["High Exceeded"])+" ("+str(info["High Percentage"])+"%)"}\n'
+    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}      {str(info["Med Exceeded"])+" ("+str(info["Med Percentage"])+"%)"}\n'
+    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}      {str(info["Low Exceeded"])+" ("+str(info["Low Percentage"])+"%)"}\n\n'
+    repo_text += (
+        f'{"Total Open".ljust(7)}{str(info["Open Total"]).center(38)}\n'
+    )
     repo_text += f"```"
     repo_text += f"\n"
 
@@ -453,6 +457,7 @@ def send_to_slack(text):
                 "text": {
                     "type": "plain_text",
                     "text": "Top Five Repos - Dependabot Alerts Severity",
+                    "emoji": True,
                 },
             },
             {
@@ -478,7 +483,6 @@ def send_to_slack(text):
 def main():
 
     parsed_data = []
-    # slos = []
     non_archived, archived = get_repo_list()
 
     (
@@ -492,9 +496,6 @@ def main():
     for repo in range(len(vulns_json_data)):
         repo = Repo(repos_with_vulns[repo], vulns_json_data[repo])
         parsed_data.append(repo.parsed_data)
-        # slos.append(repo.get_slo())
-
-    # print(slos)
 
     # sort rows based on "priority" column
     sorted_data = sorted(
