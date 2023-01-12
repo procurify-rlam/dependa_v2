@@ -352,6 +352,7 @@ def get_org_data(
         "Repos with alerts": num_with_vulns,
         "Repos without alerts": num_no_vulns,
         "Repos disabled alerts": num_disabled,
+        "Open Total": 0,
         "Open Crit": 0,
         "Open High": 0,
         "Open Med": 0,
@@ -379,6 +380,13 @@ def get_org_data(
         org_data["Open Composer"] += parsed_data[data]["Open Composer"]
         org_data["Open Rust"] += parsed_data[data]["Open Rust"]
         org_data["Open Unknown"] += parsed_data[data]["Open Unknown"]
+
+    org_data["Open Total"] = (
+        org_data["Open Crit"]
+        + org_data["Open High"]
+        + org_data["Open Med"]
+        + org_data["Open Low"]
+    )
 
     return org_data
 
@@ -425,7 +433,7 @@ def write_txt_data(sorted_data):
     print(f"Text file of all dependabot repos written to {parsed_data_txt}")
 
 
-def add_text_data(info, data_type):
+def add_text_data(info):
     """Create code block to send to slack channel"""
 
     # if data_type == "repo_data":
@@ -434,12 +442,34 @@ def add_text_data(info, data_type):
 
     repo_text = f"```"
     repo_text += f'{info["Name"].ljust(7)}                                {"No. alerts exceeding SLO".rjust(1)}\n\n'
-    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(40)}    {str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
+    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(38)}      {str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
     repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}      {str(info["High Exceeded"])+" ("+str(info["High Percentage"])+"%)"}\n'
     repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}      {str(info["Med Exceeded"])+" ("+str(info["Med Percentage"])+"%)"}\n'
     repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}      {str(info["Low Exceeded"])+" ("+str(info["Low Percentage"])+"%)"}\n\n'
     repo_text += (
-        f'{"Total Open".ljust(7)}{str(info["Open Total"]).center(38)}\n'
+        f'{"Total Open".ljust(6)}{str(info["Open Total"]).center(35)}\n'
+    )
+    # repo_text += f"\n"
+    # repo_text += (
+    # f'{"(SLO: Higher percentage => worse; Lower percentage => better)"}'
+    # )
+    repo_text += f"```"
+    repo_text += f"\n"
+
+    return repo_text
+
+
+def add_text_org_data(info):
+    """Create code block to send to slack channel"""
+
+    repo_text = f"```"
+    repo_text += f'{"Active Procurify Github Repositories".ljust(7)}\n\n'
+    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(38)}\n'
+    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}\n'
+    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}\n'
+    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}\n\n'
+    repo_text += (
+        f'{"Total Open".ljust(6)}{str(info["Open Total"]).center(34)}\n'
     )
     repo_text += f"```"
     repo_text += f"\n"
@@ -447,7 +477,13 @@ def add_text_data(info, data_type):
     return repo_text
 
 
-def send_to_slack(text):
+def send_to_slack(text, text_type):
+
+    headertext = ""
+    if text_type == "repo_data":
+        headertext = "Top Five Repos - Dependabot Alerts Severity"
+    elif text_type == "org_data":
+        headertext = "All Dependabot Alerts"
 
     http = urllib3.PoolManager()
     repo_data = {
@@ -456,8 +492,8 @@ def send_to_slack(text):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Top Five Repos - Dependabot Alerts Severity",
-                    "emoji": True,
+                    "text": headertext,
+                    # "emoji": True,
                 },
             },
             {
@@ -513,15 +549,14 @@ def main():
             NUM_REPOS_REPORT = len(sorted_data)
 
         text = ""
-
-        data_type = "repo_data"
         for number in range(NUM_REPOS_REPORT):
-            text += add_text_data(sorted_data[number], data_type)
-        send_to_slack(text)
+            text += add_text_data(sorted_data[number])
+        text_type = "repo_data"
+        send_to_slack(text, text_type)
 
-        # data_type = "org_data"
-        # text += add_text_data(org_data, data_type)
-        # send_to_slack(text)
+        text_type = "org_data"
+        text = add_text_org_data(org_data)
+        send_to_slack(text, text_type)
     else:
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
