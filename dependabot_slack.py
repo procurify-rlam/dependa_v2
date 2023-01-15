@@ -436,10 +436,6 @@ def write_txt_data(sorted_data):
 def add_text_data(info):
     """Create code block to send to slack channel"""
 
-    # if data_type == "repo_data":
-    # elif data_type == "org_data":
-    # header = f'{"All Active Repos".ljust(7)}\n'
-
     repo_text = f"```"
     repo_text += f'{info["Name"].ljust(7)}                                {"No. alerts exceeding SLO".rjust(1)}\n\n'
     repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(38)}      {str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
@@ -449,10 +445,6 @@ def add_text_data(info):
     repo_text += (
         f'{"Total Open".ljust(6)}{str(info["Open Total"]).center(35)}\n'
     )
-    # repo_text += f"\n"
-    # repo_text += (
-    # f'{"(SLO: Higher percentage => worse; Lower percentage => better)"}'
-    # )
     repo_text += f"```"
     repo_text += f"\n"
 
@@ -542,7 +534,7 @@ def main():
         repos_no_vulns, repos_with_vulns, repos_disabled, sorted_data
     )
 
-    if forward_to_slack:
+    if local_save is False:
         if len(sorted_data) >= 5:
             NUM_REPOS_REPORT = 5
         else:
@@ -565,8 +557,7 @@ def main():
 
 if __name__ == "__main__":
 
-    # forward_to_slack, auth, org, slack_webhook global vars
-    forward_to_slack = False
+    local_save = False
 
     try:
         apikey = os.environ["GH_API_KEY"]
@@ -577,23 +568,25 @@ if __name__ == "__main__":
         print("Eg: export GH_API_KEY=ghp_XXXXXXXXX")
         sys.exit(1)
 
-    if len(sys.argv) == 1:
-        print("Please provide an organization name to query.")
-        print()
-        print(f"python3 {sys.argv[0]} <name of org>")
-        print(f"Eg: python3 {sys.argv[0]} procurify")
+    try:
+        org = os.environ["GH_ORG"]
+    except KeyError:
+        print("GH_ORG environment variable not set")
+        print("Please set the Github Organization via environment variable.")
+        print("Eg: export GH_ORG=google")
         sys.exit(1)
-    elif len(sys.argv) == 2:
-        org = sys.argv[1]
-    elif (len(sys.argv) == 3) and (sys.argv[2] == "slack"):
-        org = sys.argv[1]
-        try:
-            slack_webhook = os.environ["SLACK_URL"]
-            forward_to_slack = True
-        except KeyError:
-            print("SLACK_URL environment variable not set")
-            print("Please set the SLACK_URL via environment variable.")
-            print("Eg: export SLACK_URL=https://hooks.slack.com/services/XXX")
-            sys.exit(1)
+
+    try:
+        slack_webhook = os.environ["SLACK_URL"]
+    except KeyError:
+        print("SLACK_URL environment variable not set")
+        print("Please set the SLACK_URL via environment variable.")
+        print("Eg: export SLACK_URL=https://hooks.slack.com/services/XXX")
+        sys.exit(1)
+
+    if len(sys.argv) == 2 and sys.argv[1] == "local":
+        local_save = True
+        print("Saving output to local disk")
+        print()
 
     main()
