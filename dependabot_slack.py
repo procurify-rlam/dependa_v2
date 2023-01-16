@@ -11,7 +11,25 @@ from datetime import datetime
 
 
 class Repo:
-    """parse data for the repo and return dictionary of relevant information"""
+    """parse data for the repo and return dictionary of relevant information
+
+    Args:
+        None
+
+    Returns:
+        dict: returns information for open,fixed,dismissed state of repos,
+              including severity levels, ecosystems, and service level
+              objectives (SLO) and priority level.
+
+              Priority level is deteremined by sum of critical plus high
+              vulnerabilities.
+
+              SLO definitions: critical - 15 days
+                               high - 30 days
+                               medium - 90 days
+                               low - 180 days
+
+    """
 
     def __init__(self, name, repo_dict):
 
