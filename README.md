@@ -25,22 +25,20 @@ with Python 3.6 and above.  (f-strings used in print statements)
 
 1. Set the following environment variables:\
     a. GH_API_KEY - Github API key\
-        eg: export GH_API_KEY=ghp_XXXXXXXXX\
+        eg: ```export GH_API_KEY=ghp_XXXXXXXXX```\
     b. GH_ORG - Github organization to query\
-        eg: export GH_ORG=procurify\
+        eg: ```export GH_ORG=procurify```\
     c. SLACK_URL - slack url to the slack webhook\
-        eg: export SLACK_URL=https://hooks.slack.com/services/XXX"
+        eg: ```export SLACK_URL="https://hooks.slack.com/services/XXX"```
 
 2. ```python3 dependabot_slack.py``` alternatively, if sending to a Slack
 channel is not desired.\
-```python3 dependabot_slack.py local``` will save all
-data to local disk.
-
+```python3 dependabot_slack.py local``` will save all data to local disk.
 
 * Output (CSV) files are written to the current folder.
-* JSON files for each repo is saved to ./output folder, in the event manual
-review is needed.  This data can also be viewed via Github, assuming
-appropriate permissions are granted.
+* JSON files for each repo is saved to the current folder under ./output,
+in the event manual review is needed.  This data can also be viewed via Github,
+assuming appropriate permissions are granted.
 
 
 ## Notes
