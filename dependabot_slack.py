@@ -276,6 +276,8 @@ def get_dependabot_alerts(non_archived):
     repos_with_vulns = []
     repos_disabled = []
     repo_vulns = []
+    no_vulns_json_data = []
+    disabled_json_data = []
     vulns_json_data = []
 
     http = urllib3.PoolManager()
@@ -327,15 +329,24 @@ def get_dependabot_alerts(non_archived):
             if len(json_resp) == 0:
                 # no dependabot alerts associated with the repo
                 repos_no_vulns.append(repo_name)
+                no_vulns_json_data.append(json_resp)
             elif "message" in json_resp:
                 # dependabot alerts disabled for the repo
                 repos_disabled.append(repo_name)
+                disabled_json_data.append(json_resp)
             else:
                 # less than 30 dependabot alerts associated with the repo
                 repos_with_vulns.append(repo_name)
                 vulns_json_data.append(json_resp)
-
-    return repos_no_vulns, repos_with_vulns, repos_disabled, vulns_json_data
+    # TODO: Fix this ugliness; multiple returned items is generally bad practice
+    return (
+        repos_no_vulns,
+        repos_with_vulns,
+        repos_disabled,
+        no_vulns_json_data,
+        disabled_json_data,
+        vulns_json_data,
+    )
 
 
 def get_org_data(
@@ -517,6 +528,8 @@ def main():
         repos_no_vulns,
         repos_with_vulns,
         repos_disabled,
+        no_vulns_json_data,
+        disabled_json_data,
         vulns_json_data,
     ) = get_dependabot_alerts(non_archived)
 
@@ -549,10 +562,31 @@ def main():
         text_type = "org_data"
         text = add_text_org_data(org_data)
         send_to_slack(text, text_type)
+
     else:
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
         write_org_csv_data(org_data)
+        for repo in range(len(vulns_json_data)):
+            json_object = json.dumps(vulns_json_data, indent=4)
+            with open(
+                f"./output/{repos_with_vulns[repo]}.json", "w"
+            ) as output_file:
+                output_file.write(json_object)
+
+        for repo in range(len(no_vulns_json_data)):
+            json_object = json.dumps(no_vulns_json_data, indent=4)
+            with open(
+                f"./output/{repos_no_vulns[repo]}.json", "w"
+            ) as output_file:
+                output_file.write(json_object)
+
+        for repo in range(len(disabled_json_data)):
+            json_object = json.dumps(disabled_json_data, indent=4)
+            with open(
+                f"./output/{repos_disabled[repo]}.json", "w"
+            ) as output_file:
+                output_file.write(json_object)
 
 
 if __name__ == "__main__":
@@ -576,17 +610,17 @@ if __name__ == "__main__":
         print("Eg: export GH_ORG=google")
         sys.exit(1)
 
-    try:
-        slack_webhook = os.environ["SLACK_URL"]
-    except KeyError:
-        print("SLACK_URL environment variable not set")
-        print("Please set the SLACK_URL via environment variable.")
-        print("Eg: export SLACK_URL=https://hooks.slack.com/services/XXX")
-        sys.exit(1)
-
     if len(sys.argv) == 2 and sys.argv[1] == "local":
         local_save = True
         print("Saving output to local disk")
         print()
+    else:
+        try:
+            slack_webhook = os.environ["SLACK_URL"]
+        except KeyError:
+            print("SLACK_URL environment variable not set")
+            print("Please set the SLACK_URL via environment variable.")
+            print("Eg: export SLACK_URL=https://hooks.slack.com/services/XXX")
+            sys.exit(1)
 
     main()
