@@ -466,14 +466,14 @@ def add_text_data(info):
     """Create code block to send to slack channel"""
 
     repo_text = f"```"
-    repo_text += f'{info["Name"].ljust(7)}                                {"No. alerts exceeding SLO".rjust(1)}\n\n'
-    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(38)}      {str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
-    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}      {str(info["High Exceeded"])+" ("+str(info["High Percentage"])+"%)"}\n'
-    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}      {str(info["Med Exceeded"])+" ("+str(info["Med Percentage"])+"%)"}\n'
-    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}      {str(info["Low Exceeded"])+" ("+str(info["Low Percentage"])+"%)"}\n\n'
     repo_text += (
-        f'{"Total Open".ljust(6)}{str(info["Open Total"]).center(35)}\n'
+        f'{info["Name"]}\t\t\t\t{"No. alerts exceeding SLO".rjust(1)}\n\n'
     )
+    repo_text += f'{"Critical"}\t\t\t{str(info["Open Crit"])}\t\t\t{str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
+    repo_text += f'{"High"}\t\t\t\t{str(info["Open High"])}\t\t\t{str(info["High Exceeded"])+" ("+str(info["High Percentage"])+"%)"}\n'
+    repo_text += f'{"Medium"}  \t\t\t{str(info["Open Med"])}\t\t\t{str(info["Med Exceeded"])+" ("+str(info["Med Percentage"])+"%)"}\n'
+    repo_text += f'{"Low"} \t\t\t\t{str(info["Open Low"])}\t\t\t{str(info["Low Exceeded"])+" ("+str(info["Low Percentage"])+"%)"}\n\n'
+    repo_text += f'{"Total Open"}   \t\t{str(info["Open Total"])}\n'
     repo_text += f"```"
     repo_text += f"\n"
 
@@ -484,14 +484,12 @@ def add_text_org_data(info):
     """Create code block to send to slack channel"""
 
     repo_text = f"```"
-    repo_text += f'{"Active Procurify Github Repositories".ljust(7)}\n\n'
-    repo_text += f'{"Critical".ljust(7)}{str(info["Open Crit"]).center(38)}\n'
-    repo_text += f'{"High".ljust(7)}{str(info["Open High"]).center(40)}\n'
-    repo_text += f'{"Medium".ljust(7)}{str(info["Open Med"]).center(40)}\n'
-    repo_text += f'{"Low".ljust(7)}{str(info["Open Low"]).center(40)}\n\n'
-    repo_text += (
-        f'{"Total Open".ljust(6)}{str(info["Open Total"]).center(34)}\n'
-    )
+    repo_text += f'{"Active Procurify Github Repositories"}\n\n'
+    repo_text += f'{"Critical"}\t\t\t{str(info["Open Crit"])}\n'
+    repo_text += f'{"High"}\t\t\t\t{str(info["Open High"])}\n'
+    repo_text += f'{"Medium"}  \t\t\t{str(info["Open Med"])}\n'
+    repo_text += f'{"Low"}  \t\t\t\t{str(info["Open Low"])}\n\n'
+    repo_text += f'{"Total Open"}  \t\t{str(info["Open Total"])}\n'
     repo_text += f"```"
     repo_text += f"\n"
 
