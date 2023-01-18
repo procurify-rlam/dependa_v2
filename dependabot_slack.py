@@ -21,8 +21,12 @@ class Repo:
               including severity levels, ecosystems, and service level
               objectives (SLO) and priority level.
 
-              Priority level is deteremined by sum of critical plus high
-              vulnerabilities.
+              Priority level is calculated by sum of critical plus high
+              vulnerabilities.  The intent here to provide organizations
+              (or development teams) a priority of which repos to remediate
+              first based on volume of criticals and high.  Naturally critical
+              and high vulnerabilities typically a take higher precedent over
+              medium and low alerts.
 
               SLO definitions: critical - 15 days
                                high - 30 days
@@ -54,6 +58,11 @@ class Repo:
         self.parsed_data.update(combined_data)
 
     def get_slo(self):
+        """Calculate age of vulnerability (dependabaot alert) based on
+        published date and current date/time when script is executed
+        SLO = Service Level Objective.
+        Below SLO age are target SLOs to maintain.
+        """
 
         CRIT_MAX_SLO_DAYS = 15
         HIGH_MAX_SLO_DAYS = 30
@@ -109,7 +118,11 @@ class Repo:
         return slo
 
     def get_state_data(self):
-        """template dictionary keys; allows reuse of nested parse_data function"""
+        """Parse state severity data from repos.  See below state_template
+        dictionary for respective open, fixed, dismissed information that
+        is obtained.
+        """
+        # template dictionary keys; allows reuse of nested parse_data function
         state_template = {
             "Total": 0,
             "Crit": 0,
@@ -136,6 +149,16 @@ class Repo:
         date_list_dismissed = []
 
         def parse_data(item_dict, parsed_dict):
+            """parse ecosystem data with respect to critical,high,medium,low
+            findings
+
+            Args:
+                parsed_dict: dictionary of json dependabot information
+
+            Returns:
+                parsed_dict: dictionary, with ecoysystem count for each
+                             severity level
+            """
 
             parsed_dict["Total"] += 1
 
@@ -248,7 +271,13 @@ class Repo:
 
 
 def get_repo_list():
-    """retrieve list of all repos for the organization indicate"""
+    """Retrieve list of all repos for the organization designated by the
+    environment variable GH_ORG.
+
+    Returns:
+       list of non-archived repos.
+       list of archived repos.
+    """
     http = urllib3.PoolManager()
     # set args for http request
     all_repo_list = []
@@ -263,6 +292,7 @@ def get_repo_list():
     json_resp = json.loads(resp.data.decode("utf-8"))
     all_repo_list.append(json_resp)
 
+    # continue querying until all repos are returned
     if len(json_resp) == 100:
         while len(json_resp) == 100:
             page += 1
@@ -289,7 +319,24 @@ def get_repo_list():
 
 
 def get_dependabot_alerts(non_archived):
-    """retrieve all dependabot data for active repos"""
+    """Retrieve all dependabot data for active repos.
+
+       Returns json data for all repos, in separate lists.  The data returned
+       is for future implementation. (Saved data to local disk to be
+       read instead of querying the Github API repeatedly)
+
+    Args:
+        non_archived(list): list of non-archived repos
+
+    Returns:
+        repos_no_vulns: list of repos without dependabot alerts
+        repos_with_vulns: list of repos with dependabot alerts
+        repos_disabled: list of repos with dependabot alerts disabled
+        no_vulns_json_data: json data of repos without depabot alerts
+        disabled_json_data: json data of repos that are disabled dependabot
+        vulns_json_data: json data of repos with dependabot alerts
+
+    """
     repos_no_vulns = []
     repos_with_vulns = []
     repos_disabled = []
@@ -321,7 +368,7 @@ def get_dependabot_alerts(non_archived):
         json_resp_header = dict(resp.headers)
 
         # if 30 or more items, response will be paginated,
-        # find last page to query
+        # determine the last page to query
         if "Link" in json_resp_header:
             pages_regex = re.findall(r"page=\d+", json_resp_header["Link"])
             lastpage_regex = re.findall(r"\d+", pages_regex[1])
@@ -370,7 +417,17 @@ def get_dependabot_alerts(non_archived):
 def get_org_data(
     repos_no_vulns, repos_with_vulns, repos_disabled, parsed_data
 ):
-    """calculate org data; return dictionary"""
+    """Calculate organizational data.
+
+    Args:
+        repos_no_vulns: list of repos without dependabot alerts
+        repos_with_vulns: list of repos with dependabot alerts
+        repos_disabled: list of repos with dependabot alerts disabled
+        parsed_data: list of parsed data from each repo
+
+    Return:
+        org_data: dictionary of organization data
+    """
     num_no_vulns = len(repos_no_vulns)
     num_with_vulns = len(repos_with_vulns)
     num_disabled = len(repos_disabled)
@@ -463,7 +520,14 @@ def write_txt_data(sorted_data):
 
 
 def add_text_data(info):
-    """Create code block to send to slack channel"""
+    """Create code block to send to slack channel.
+
+    Args:
+        info: dictionary of information to be displayed
+
+    Returns:
+        repo_text: text block to send to slack
+    """
 
     repo_text = f"```"
     repo_text += (
@@ -481,7 +545,16 @@ def add_text_data(info):
 
 
 def add_text_org_data(info):
-    """Create code block to send to slack channel"""
+    """Create code block to send to slack channel.
+    This function is slightly different from add_text_data function,
+    as this is organization information, consquently has a different format.
+
+    Args:
+        info: dictionary of information to be displayed
+
+    Returns:
+        repo_text: text block to send to slack
+    """
 
     repo_text = f"```"
     repo_text += f'{"Active Procurify Github Repositories"}\n\n'
@@ -497,7 +570,16 @@ def add_text_org_data(info):
 
 
 def send_to_slack(text, text_type):
+    """Final http request & message to send to slack to display in
+    the appropriate channel via Operating System Environment variable SLACK_URL
 
+    Args:
+        text_type: data type - determines header value of the output
+
+    Returns:
+        Null
+
+    """
     headertext = ""
     if text_type == "repo_data":
         headertext = "Top Five Repos - Dependabot Alerts Severity"
@@ -563,6 +645,8 @@ def main():
         repos_no_vulns, repos_with_vulns, repos_disabled, sorted_data
     )
 
+    # report top five 'worst' repos only, change NUM_REPOS_REPORT as required
+    # send to slack channel by default, else write to local disk
     if local_save is False:
         if len(sorted_data) >= 5:
             NUM_REPOS_REPORT = 5
@@ -578,11 +662,12 @@ def main():
         text_type = "org_data"
         text = add_text_org_data(org_data)
         send_to_slack(text, text_type)
-
     else:
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
         write_org_csv_data(org_data)
+        print()
+        print("Saving JSON dependabot data to ./output/")
         for repo in range(len(vulns_json_data)):
             json_object = json.dumps(vulns_json_data, indent=4)
             with open(
@@ -626,9 +711,11 @@ if __name__ == "__main__":
         print("Eg: export GH_ORG=google")
         sys.exit(1)
 
+    # require SLACK_URL (webhook) if not writing to local disk -
+    # default is to send to slack
     if len(sys.argv) == 2 and sys.argv[1] == "local":
         local_save = True
-        print("Saving output to local disk")
+        print("Saving data to local disk")
         print()
     else:
         try:
