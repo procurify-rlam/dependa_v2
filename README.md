@@ -17,6 +17,7 @@ ecosystem (programming language) type of vulnerability.
 * Bash or ZSH Shell
 * A Github token with _security_events_ scope to read private repositories is
 required.
+* Python urllib3 module
 * Python 3 - This was developed and tested with Python 3.10.  Likely to work
 with Python 3.6 and above.  (f-strings used in print statements)
 
@@ -31,14 +32,16 @@ with Python 3.6 and above.  (f-strings used in print statements)
     c. SLACK_URL - slack url to the slack webhook\
         eg: ```export SLACK_URL="https://hooks.slack.com/services/XXX"```
 
-2. ```python3 dependabot_slack.py``` alternatively, if sending to a Slack
+2. ```pip install urlib3```
+
+3. ```python3 dependabot_slack.py``` alternatively, if sending to a Slack
 channel is not desired.\
 ```python3 dependabot_slack.py local``` will save all data to local disk.
 
 * Output (CSV) files are written to the current folder.
 * JSON files for each repo is saved to the current folder under ./output,
-in the event manual review is needed.  This data can also be viewed via Github,
-assuming appropriate permissions are granted.
+in the event manual review is needed.  Note, this data can also be viewed via Github,
+within the reposistory, under the security tab, assuming appropriate permissions are granted.
 
 
 ## Notes
@@ -48,7 +51,15 @@ assuming appropriate permissions are granted.
     * Vectorization via [NumPy](https://numpy.org/) or [Pandas](https://pandas.pydata.org/)
     (Pandas is built on top of NumPy)
 
-2. Slack output (presentation) is limited.  Consequently, the output is less than ideal.
+2. Slack output (presentation) is limited.  Consequently, the output is less
+   than ideal.
+
+3. This script is maintained within a single file, for potential convenient
+   deployment to AWS Lambda.  Although there are options to facilitate multiple
+   files or utilize Lambda Layers, a single file deployment is most convenient.
+
+4. Minimal use of external modules was intentional - again to minimize
+   complexity for potential deployment to a AWS, as well as for local testing.
 
 
 ## TODO

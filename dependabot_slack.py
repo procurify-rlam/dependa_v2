@@ -8,6 +8,7 @@ import re
 import pprint
 import csv
 from datetime import datetime
+from pathlib import Path
 
 
 class Repo:
@@ -668,6 +669,10 @@ def main():
         write_org_csv_data(org_data)
         print()
         print("Saving JSON dependabot data to ./output/")
+
+        if not Path("./output").exists():
+            Path("./output").mkdir(exist_ok=True)
+
         for repo in range(len(vulns_json_data)):
             json_object = json.dumps(vulns_json_data, indent=4)
             with open(
