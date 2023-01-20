@@ -557,8 +557,10 @@ def add_text_org_data(info):
         repo_text: text block to send to slack
     """
 
+    current_time = datetime.now()
+
     repo_text = f"```"
-    repo_text += f'{"Active Procurify Github Repositories"}\n\n'
+    repo_text += f'{"Active Procurify Github Repositories"}\t\t{str(current_time.strftime("%Y-%m-%d %H:%M:%S"))}\n\n'
     repo_text += f'{"Critical"}\t\t\t{str(info["Open Crit"])}\n'
     repo_text += f'{"High"}\t\t\t\t{str(info["Open High"])}\n'
     repo_text += f'{"Medium"}  \t\t\t{str(info["Open Med"])}\n'
