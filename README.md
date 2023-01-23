@@ -40,8 +40,25 @@ channel is not desired.\
 
 * Output (CSV) files are written to the current folder.
 * JSON files for each repo is saved to the current folder under ./output,
-in the event manual review is needed.  Note, this data can also be viewed via Github,
-within the reposistory, under the security tab, assuming appropriate permissions are granted.
+in the event manual review is needed.  Note, this data can also be viewed via
+Github, within the reposistory, under the security tab, assuming appropriate
+permissions are granted.
+
+
+## Service Level Objectives (SLO)
+
+This script output provides SLO percentage numbers as defined by "the
+objectives your team must hit to mee that agreement".
+
+Based on CVSSv3 Score, below is the SLO calculations the Slack output
+are based on.
+
+| CVSSv3 Score   | Time to Redmediate (Days) |
+|---|---|
+| 9.0-10.0 (Critical)  | 15  |
+| 7.-8.9 (High)  | 30  |
+| 4.0-6.9 (Medium)  | 90  |
+| 0.1-3.9 (Low)  | 180  |
 
 
 ## Notes
@@ -49,7 +66,6 @@ within the reposistory, under the security tab, assuming appropriate permissions
 1. Optimization considerations:
     * Query Github via [GraphQL](https://github.blog/changelog/2022-06-29-dependabot-alerts-dependency-scope-filter-via-graphql-api/)
     * Vectorization via [NumPy](https://numpy.org/) or [Pandas](https://pandas.pydata.org/)
-    (Pandas is built on top of NumPy)
 
 2. Slack output (presentation) is limited.  Consequently, the output is less
    than ideal.
