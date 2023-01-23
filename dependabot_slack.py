@@ -70,7 +70,6 @@ class Repo:
         MED_MAX_SLO_DAYS = 90
         LOW_MAX_SLO_DAYS = 180
 
-        current_time = datetime.now()
         slo = {
             "Crit Exceeded": 0,
             "High Exceeded": 0,
@@ -481,43 +480,57 @@ def get_org_data(
 def write_org_csv_data(data):
 
     header = data.keys()
-    parsed_data_csv = "org_data.csv"
+    org_data_dir = "./org_data/"
+    org_data_csv = "org_data.csv"
 
-    with open(parsed_data_csv, "w") as parsed_data_file:
-        writer = csv.DictWriter(parsed_data_file, fieldnames=header)
+    if not Path(org_data_dir).exists():
+        Path(org_data_dir).mkdir(exist_ok=True)
+
+    with open(f"{org_data_dir}{org_data_csv}", "w") as org_data_file:
+        writer = csv.DictWriter(org_data_file, fieldnames=header)
         writer.writeheader()
         writer.writerow(data)
 
     print()
-    print(f"Org data written to {parsed_data_csv}")
+    print(f"Org data written to {org_data_dir}{org_data_csv}")
 
 
 def write_csv_data(data):
 
     header = data[0].keys()
+    parsed_data_dir = "./data/"
     parsed_data_csv = "parsed_data.csv"
 
-    with open(parsed_data_csv, "w") as parsed_data_file:
+    if not Path(parsed_data_dir).exists():
+        Path(parsed_data_dir).mkdir(exist_ok=True)
+
+    with open(f"{parsed_data_dir}{parsed_data_csv}", "w") as parsed_data_file:
         writer = csv.DictWriter(parsed_data_file, fieldnames=header)
         writer.writeheader()
         writer.writerows(data)
 
     print()
-    print(f"Repo CSV data written to {parsed_data_csv}")
+    print(f"Repo CSV data written to {parsed_data_dir}{parsed_data_csv}")
 
 
 def write_txt_data(sorted_data):
 
+    parsed_data_dir = "./data/"
     parsed_data_txt = "parsed_data.txt"
 
-    with open(parsed_data_txt, "w") as parsed_data_file:
+    if not Path(parsed_data_dir).exists():
+        Path(parsed_data_dir).mkdir(exist_ok=True)
+
+    with open(f"{parsed_data_dir}{parsed_data_txt}", "w") as parsed_data_file:
         pp = pprint.PrettyPrinter(
             depth=4, sort_dicts=False, stream=parsed_data_file
         )
         pp.pprint(sorted_data)
 
     print()
-    print(f"Text file of all dependabot repos written to {parsed_data_txt}")
+    print(
+        f"Text file of all dependabot repos written to {parsed_data_dir}{parsed_data_txt}"
+    )
 
 
 def add_text_data(info):
@@ -556,8 +569,6 @@ def add_text_org_data(info):
     Returns:
         repo_text: text block to send to slack
     """
-
-    current_time = datetime.now()
 
     repo_text = f"```"
     repo_text += f'{"Active Procurify Github Repositories"}\t\t{str(current_time.strftime("%Y-%m-%d %H:%M:%S"))}\n\n'
@@ -669,30 +680,31 @@ def main():
         write_csv_data(sorted_data)
         write_txt_data(sorted_data)
         write_org_csv_data(org_data)
+        JSON_OUTPUT_FOLDER = "./json_output/"
         print()
-        print("Saving JSON dependabot data to ./output/")
+        print(f"Saving JSON dependabot data to {JSON_OUTPUT_FOLDER}")
 
-        if not Path("./output").exists():
-            Path("./output").mkdir(exist_ok=True)
+        if not Path(JSON_OUTPUT_FOLDER).exists():
+            Path(JSON_OUTPUT_FOLDER).mkdir(exist_ok=True)
 
         for repo in range(len(vulns_json_data)):
             json_object = json.dumps(vulns_json_data, indent=4)
             with open(
-                f"./output/{repos_with_vulns[repo]}.json", "w"
+                f"{JSON_OUTPUT_FOLDER}{repos_with_vulns[repo]}.json", "w"
             ) as output_file:
                 output_file.write(json_object)
 
         for repo in range(len(no_vulns_json_data)):
             json_object = json.dumps(no_vulns_json_data, indent=4)
             with open(
-                f"./output/{repos_no_vulns[repo]}.json", "w"
+                f"{JSON_OUTPUT_FOLDER}{repos_no_vulns[repo]}.json", "w"
             ) as output_file:
                 output_file.write(json_object)
 
         for repo in range(len(disabled_json_data)):
             json_object = json.dumps(disabled_json_data, indent=4)
             with open(
-                f"./output/{repos_disabled[repo]}.json", "w"
+                f"{JSON_OUTPUT_FOLDER}{repos_disabled[repo]}.json", "w"
             ) as output_file:
                 output_file.write(json_object)
 
@@ -700,6 +712,7 @@ def main():
 if __name__ == "__main__":
 
     local_save = False
+    current_time = datetime.now()
 
     try:
         apikey = os.environ["GH_API_KEY"]
