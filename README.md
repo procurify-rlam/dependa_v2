@@ -36,13 +36,16 @@ with Python 3.6 and above.  (f-strings used in print statements)
 
 3. ```python3 dependabot_slack.py``` alternatively, if sending to a Slack
 channel is not desired.\
-```python3 dependabot_slack.py local``` will save all data to local disk.
+```python3 dependabot_slack.py local``` will save data to local disk.
 
-* Output (CSV) files are written to the current folder.
-* JSON files for each repo is saved to the current folder under ./output,
+* CSV output files are written to the current folder under ./data and
+org_data/ folder.
+* JSON files for each repo is saved to the current folder under ./json_output,
 in the event manual review is needed.  Note, this data can also be viewed via
 Github, within the reposistory, under the security tab, assuming appropriate
 permissions are granted.
+* The aforementioned folders are in the .gitignore file to prevent potentially
+uploading sensitive information to github.
 
 
 ## Service Level Objectives (SLO)
