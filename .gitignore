@@ -132,4 +132,7 @@ dmypy.json
 *.txt
 *.csv
 *.json
-output/
+json_output/
+data/
+org_data/
+

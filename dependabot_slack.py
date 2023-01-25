@@ -486,13 +486,15 @@ def write_org_csv_data(data):
     if not Path(org_data_dir).exists():
         Path(org_data_dir).mkdir(exist_ok=True)
 
-    with open(f"{org_data_dir}{org_data_csv}", "w") as org_data_file:
+    with open(
+        f"{org_data_dir}{org_data_csv}-{time_stamp}", "w"
+    ) as org_data_file:
         writer = csv.DictWriter(org_data_file, fieldnames=header)
         writer.writeheader()
         writer.writerow(data)
 
     print()
-    print(f"Org data written to {org_data_dir}{org_data_csv}")
+    print(f"Org data written to {org_data_dir}{org_data_csv}-{time_stamp}")
 
 
 def write_csv_data(data):
@@ -504,13 +506,17 @@ def write_csv_data(data):
     if not Path(parsed_data_dir).exists():
         Path(parsed_data_dir).mkdir(exist_ok=True)
 
-    with open(f"{parsed_data_dir}{parsed_data_csv}", "w") as parsed_data_file:
+    with open(
+        f"{parsed_data_dir}{parsed_data_csv}-{time_stamp}", "w"
+    ) as parsed_data_file:
         writer = csv.DictWriter(parsed_data_file, fieldnames=header)
         writer.writeheader()
         writer.writerows(data)
 
     print()
-    print(f"Repo CSV data written to {parsed_data_dir}{parsed_data_csv}")
+    print(
+        f"Repo CSV data written to {parsed_data_dir}{parsed_data_csv}-{time_stamp}"
+    )
 
 
 def write_txt_data(sorted_data):
@@ -521,7 +527,9 @@ def write_txt_data(sorted_data):
     if not Path(parsed_data_dir).exists():
         Path(parsed_data_dir).mkdir(exist_ok=True)
 
-    with open(f"{parsed_data_dir}{parsed_data_txt}", "w") as parsed_data_file:
+    with open(
+        f"{parsed_data_dir}{parsed_data_txt}-{time_stamp}", "w"
+    ) as parsed_data_file:
         pp = pprint.PrettyPrinter(
             depth=4, sort_dicts=False, stream=parsed_data_file
         )
@@ -529,7 +537,7 @@ def write_txt_data(sorted_data):
 
     print()
     print(
-        f"Text file of all dependabot repos written to {parsed_data_dir}{parsed_data_txt}"
+        f"Text file of all dependabot repos written to {parsed_data_dir}{parsed_data_txt}-{time_stamp}"
     )
 
 
@@ -713,6 +721,7 @@ if __name__ == "__main__":
 
     local_save = False
     current_time = datetime.now()
+    time_stamp = current_time.strftime("%Y-%m-%d-T%H-%M")
 
     try:
         apikey = os.environ["GH_API_KEY"]
