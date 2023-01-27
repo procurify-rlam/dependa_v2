@@ -51,7 +51,7 @@ uploading sensitive information to github.
 ## Service Level Objectives (SLO)
 
 This script output provides SLO percentage numbers as defined by "the
-objectives your team must hit to mee that agreement".
+objectives your team must hit to meet that agreement".
 
 Based on CVSSv3 Score, below is the SLO calculations the Slack output
 are based on.
