@@ -552,9 +552,7 @@ def add_text_data(info):
     """
 
     repo_text = f"```"
-    repo_text += (
-        f'{info["Name"]}\t\t\t\t{"No. alerts exceeding SLO".rjust(1)}\n\n'
-    )
+    repo_text += f'{info["Name"]}\t\t\t\t{"Number of alerts exceeding SLO".rjust(1)}\n\n'
     repo_text += f'{"Critical"}\t\t\t{str(info["Open Crit"])}\t\t\t{str(info["Crit Exceeded"])+" ("+str(info["Crit Percentage"])+"%)"}\n'
     repo_text += f'{"High"}\t\t\t\t{str(info["Open High"])}\t\t\t{str(info["High Exceeded"])+" ("+str(info["High Percentage"])+"%)"}\n'
     repo_text += f'{"Medium"}  \t\t\t{str(info["Open Med"])}\t\t\t{str(info["Med Exceeded"])+" ("+str(info["Med Percentage"])+"%)"}\n'
@@ -579,7 +577,7 @@ def add_text_org_data(info):
     """
 
     repo_text = f"```"
-    repo_text += f'{"Active Procurify Github Repositories"}\t\t{str(current_time.strftime("%Y-%m-%d %H:%M:%S"))}\n\n'
+    repo_text += f'{"Active"} {org} {"Github Repositories"}\t\t{str(current_time.strftime("%Y-%m-%d %H:%M:%S"))}\n\n'
     repo_text += f'{"Critical"}\t\t\t{str(info["Open Crit"])}\n'
     repo_text += f'{"High"}\t\t\t\t{str(info["Open High"])}\n'
     repo_text += f'{"Medium"}  \t\t\t{str(info["Open Med"])}\n'
